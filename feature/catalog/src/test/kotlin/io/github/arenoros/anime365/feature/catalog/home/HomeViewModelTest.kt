@@ -1,9 +1,17 @@
 package io.github.arenoros.anime365.feature.catalog.home
 
 import io.github.arenoros.anime365.core.data.repository.HomeRepository
+import io.github.arenoros.anime365.core.model.ContinueWatching
+import io.github.arenoros.anime365.core.model.EpisodeProgress
+import io.github.arenoros.anime365.core.model.LastWatched
 import io.github.arenoros.anime365.core.model.NewEpisode
 import io.github.arenoros.anime365.core.model.SeriesSummary
-import io.github.arenoros.anime365.feature.catalog.MainDispatcherRule
+import io.github.arenoros.anime365.core.model.Translation
+import io.github.arenoros.anime365.core.model.TranslationChoice
+import io.github.arenoros.anime365.core.model.TranslationKind
+import io.github.arenoros.anime365.core.testing.FakeLibraryRepository
+import io.github.arenoros.anime365.core.testing.FakeTranslationRepository
+import io.github.arenoros.anime365.core.testing.MainDispatcherRule
 import io.github.arenoros.anime365.feature.catalog.summary
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,11 +30,13 @@ class HomeViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val repository = FakeHomeRepository()
+    private val library = FakeLibraryRepository()
+    private val translations = FakeTranslationRepository()
 
     @Test
     fun opensWithRefreshThatRespectsCacheAge() =
         runTest(mainDispatcherRule.dispatcher) {
-            val viewModel = HomeViewModel(repository)
+            val viewModel = HomeViewModel(repository, library, translations)
             backgroundScope.launch { viewModel.uiState.collect {} }
 
             assertTrue(viewModel.uiState.value.isRefreshing)
@@ -40,7 +50,7 @@ class HomeViewModelTest {
     fun showsCachedDataWithErrorWhenRefreshFails() =
         runTest(mainDispatcherRule.dispatcher) {
             repository.ongoing.value = listOf(summary(1))
-            val viewModel = HomeViewModel(repository)
+            val viewModel = HomeViewModel(repository, library, translations)
             backgroundScope.launch { viewModel.uiState.collect {} }
 
             repository.result.complete(Result.failure(IOException("offline")))
@@ -55,7 +65,7 @@ class HomeViewModelTest {
     fun pullToRefreshForcesAndClearsOldError() =
         runTest(mainDispatcherRule.dispatcher) {
             repository.result.complete(Result.failure(IOException("offline")))
-            val viewModel = HomeViewModel(repository)
+            val viewModel = HomeViewModel(repository, library, translations)
             backgroundScope.launch { viewModel.uiState.collect {} }
 
             repository.result = CompletableDeferred(Result.success(Unit))
@@ -63,6 +73,48 @@ class HomeViewModelTest {
 
             assertEquals(listOf(false, true), repository.refreshCalls)
             assertNull(viewModel.uiState.value.error)
+        }
+
+    @Test
+    fun continueWatchingIsShownEvenWithoutSiteData() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val card =
+                ContinueWatching(
+                    7,
+                    "Фрирен",
+                    null,
+                    LastWatched(101, "1 серия", 55, EpisodeProgress(101, 300, 1000, watched = false)),
+                )
+            library.continueWatching.value = listOf(card)
+            val viewModel = HomeViewModel(repository, library, translations)
+            backgroundScope.launch { viewModel.uiState.collect {} }
+
+            repository.result.complete(Result.failure(IOException("offline")))
+
+            assertEquals(listOf(card), viewModel.uiState.value.continueWatching)
+            assertFalse("Продолжить просмотр — из Библиотеки, экран не пустой", viewModel.uiState.value.isEmpty)
+        }
+
+    @Test
+    fun newEpisodeOpensPlayerWithRememberedTeam() =
+        runTest(mainDispatcherRule.dispatcher) {
+            library.choice = TranslationChoice(TranslationKind.VoiceRu, "AniLibria")
+            translations.translations.value =
+                mapOf(
+                    108 to
+                        listOf(
+                            Translation(1, 108, TranslationKind.VoiceRu, "SHIZA Project", "tv", 1080),
+                            Translation(2, 108, TranslationKind.VoiceRu, "AniLibria", "tv", 1080),
+                        ),
+                )
+            val viewModel = HomeViewModel(repository, library, translations)
+            val events = mutableListOf<HomeEvent>()
+            backgroundScope.launch { viewModel.events.collect { events += it } }
+
+            viewModel.openEpisode(seriesId = 7, episodeId = 108)
+            viewModel.openEpisode(seriesId = 7, episodeId = 109)
+
+            assertEquals(listOf(HomeEvent.Play(7, 108, 2), HomeEvent.ChooseTranslation(7, 109)), events)
         }
 
     private class FakeHomeRepository : HomeRepository {

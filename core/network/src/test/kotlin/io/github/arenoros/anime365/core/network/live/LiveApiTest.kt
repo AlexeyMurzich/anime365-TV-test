@@ -5,6 +5,7 @@ import io.github.arenoros.anime365.core.network.createAnime365Api
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
@@ -41,5 +42,20 @@ class LiveApiTest {
 
             assertTrue(series.episodes.isNotEmpty())
             assertTrue(feed.all { it.episode != null })
+        }
+
+    @Test
+    fun streamNeedsTokenAndHasSubtitles() =
+        runTest {
+            val token = System.getProperty("anime365.accessToken").orEmpty()
+            assumeTrue("нет Токена в secrets.properties", token.isNotEmpty())
+
+            // 9volt, 1-я серия Фрирен: Отдельные субтитры (docs/api-notes.md).
+            val embed = api.embed(5987619, token).unwrap()
+            val user = api.me(token).unwrap()
+
+            assertTrue(embed.stream.isNotEmpty() && embed.stream.all { it.urls.isNotEmpty() })
+            assertTrue(embed.subtitlesUrl!!.startsWith("/"))
+            assertTrue(user.isLogined)
         }
 }

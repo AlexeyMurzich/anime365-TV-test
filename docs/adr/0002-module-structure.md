@@ -50,6 +50,8 @@ series, player, library, account, upload). Цель — не скорость с
   неиспользуемые зависимости.
 - Hilt фича подключает сама (`anime365.hilt`) вместе с первой ViewModel, а не
   через convention фичи.
+- `:core:testing` — фейки репозиториев и правило диспетчера для unit-тестов фич; подключается
+  только как `testImplementation`.
 
 ## Дизайн-система
 

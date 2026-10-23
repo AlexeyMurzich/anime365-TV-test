@@ -5,12 +5,18 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import io.github.arenoros.anime365.core.data.repository.AccountRepository
 import io.github.arenoros.anime365.core.data.repository.CatalogRepository
 import io.github.arenoros.anime365.core.data.repository.HomeRepository
+import io.github.arenoros.anime365.core.data.repository.LibraryRepository
+import io.github.arenoros.anime365.core.data.repository.LocalLibraryRepository
+import io.github.arenoros.anime365.core.data.repository.OfflineFirstAccountRepository
 import io.github.arenoros.anime365.core.data.repository.OfflineFirstCatalogRepository
 import io.github.arenoros.anime365.core.data.repository.OfflineFirstHomeRepository
 import io.github.arenoros.anime365.core.data.repository.OfflineFirstSeriesRepository
+import io.github.arenoros.anime365.core.data.repository.OfflineFirstTranslationRepository
 import io.github.arenoros.anime365.core.data.repository.SeriesRepository
+import io.github.arenoros.anime365.core.data.repository.TranslationRepository
 import java.time.Clock
 
 @Module
@@ -24,6 +30,15 @@ internal abstract class DataModule {
 
     @Binds
     abstract fun seriesRepository(repository: OfflineFirstSeriesRepository): SeriesRepository
+
+    @Binds
+    abstract fun accountRepository(repository: OfflineFirstAccountRepository): AccountRepository
+
+    @Binds
+    abstract fun translationRepository(repository: OfflineFirstTranslationRepository): TranslationRepository
+
+    @Binds
+    abstract fun libraryRepository(repository: LocalLibraryRepository): LibraryRepository
 
     companion object {
         @Provides

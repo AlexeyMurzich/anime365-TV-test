@@ -24,14 +24,19 @@ data class CatalogKey(
     }
 }
 
+/** [onOpenEpisode] — Выбор Перевода для Эпизода, [onPlay] — Плеер сразу. */
 fun EntryProviderScope<NavKey>.catalogEntries(
     onOpenSeries: (seriesId: Int) -> Unit,
+    onOpenEpisode: (seriesId: Int, episodeId: Int) -> Unit,
+    onPlay: (seriesId: Int, episodeId: Int, translationId: Int) -> Unit,
     onOpenCatalog: (CatalogKey) -> Unit,
     onBack: () -> Unit,
 ) {
     entry<HomeKey> {
         HomeRoute(
             onOpenSeries = onOpenSeries,
+            onOpenEpisode = onOpenEpisode,
+            onPlay = onPlay,
             onOpenSearch = { onOpenCatalog(CatalogKey(focusSearch = true)) },
             onShowAllOngoing = { onOpenCatalog(CatalogKey(ongoingOnly = true)) },
         )

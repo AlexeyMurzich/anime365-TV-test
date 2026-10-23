@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -28,6 +29,7 @@ import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
 /**
  * PosterCard Kadr: постер 2:3, рейтинг слева сверху, статус справа снизу, название в две строки.
  * Название всегда занимает две строки, чтобы карточки одного ряда сетки были одной высоты.
+ * [progress] — полоска позиции внизу постера: карточка «Продолжить просмотр».
  */
 @Composable
 fun PosterCard(
@@ -38,45 +40,14 @@ fun PosterCard(
     status: PosterStatus?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    progress: Float? = null,
 ) {
     Column(
         modifier
             .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onClick),
     ) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .aspectRatio(KadrLayout.PosterRatio)
-                .clip(MaterialTheme.shapes.small)
-                .background(KadrTheme.palette.surfaceVariant),
-        ) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = null,
-                modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.Crop,
-            )
-            if (score != null) {
-                RatingCompact(
-                    score = score,
-                    color = KadrTheme.palette.onScrim,
-                    modifier =
-                        Modifier
-                            .align(Alignment.TopStart)
-                            .padding(KadrSpacing.Space1)
-                            .background(KadrTheme.palette.scrim, RoundedCornerShape(KadrRadius.Xs))
-                            .padding(horizontal = KadrSpacing.Space1, vertical = 2.dp),
-                )
-            }
-            if (status != null) {
-                StatusBadge(
-                    status = status,
-                    overImage = true,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(KadrSpacing.Space1),
-                )
-            }
-        }
+        PosterArt(imageUrl, score, status, progress)
         Text(
             text = title,
             modifier = Modifier.padding(top = KadrSpacing.Space1),
@@ -92,6 +63,61 @@ fun PosterCard(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+/** Постер 2:3 с рейтингом, статусом и полоской позиции. */
+@Composable
+private fun PosterArt(
+    imageUrl: String?,
+    score: Double?,
+    status: PosterStatus?,
+    progress: Float?,
+) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .aspectRatio(KadrLayout.PosterRatio)
+            .clip(MaterialTheme.shapes.small)
+            .background(KadrTheme.palette.surfaceVariant),
+    ) {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = null,
+            modifier = Modifier.matchParentSize(),
+            contentScale = ContentScale.Crop,
+        )
+        if (score != null) {
+            RatingCompact(
+                score = score,
+                color = KadrTheme.palette.onScrim,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(KadrSpacing.Space1)
+                        .background(KadrTheme.palette.scrim, RoundedCornerShape(KadrRadius.Xs))
+                        .padding(horizontal = KadrSpacing.Space1, vertical = 2.dp),
+            )
+        }
+        if (status != null) {
+            StatusBadge(
+                status = status,
+                overImage = true,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(KadrSpacing.Space1),
+            )
+        }
+        if (progress != null) {
+            val track = Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp)
+            Box(track.background(KadrTheme.palette.scrim)) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(
+                            progress.coerceIn(0f, 1f),
+                        ).fillMaxHeight()
+                        .background(KadrTheme.palette.primary),
+                )
+            }
+        }
     }
 }
 

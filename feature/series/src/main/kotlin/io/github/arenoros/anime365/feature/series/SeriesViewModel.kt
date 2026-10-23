@@ -6,8 +6,14 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.arenoros.anime365.core.data.repository.LibraryRepository
 import io.github.arenoros.anime365.core.data.repository.SeriesRepository
+import io.github.arenoros.anime365.core.model.Episode
+import io.github.arenoros.anime365.core.model.EpisodeProgress
+import io.github.arenoros.anime365.core.model.LastWatched
 import io.github.arenoros.anime365.core.model.Series
+import io.github.arenoros.anime365.core.model.episodeAfter
+import io.github.arenoros.anime365.core.model.firstEpisode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +26,39 @@ internal data class SeriesUiState(
     val series: Series? = null,
     val isRefreshing: Boolean = true,
     val error: Throwable? = null,
-)
+    /** Прогресс по `id` Эпизода. */
+    val progress: Map<Int, EpisodeProgress> = emptyMap(),
+    val lastWatched: LastWatched? = null,
+) {
+    /** Главная кнопка экрана: недосмотренное — сразу в Плеер, иначе — следующий или первый Эпизод. */
+    val watchAction: WatchAction?
+        get() {
+            val last = lastWatched
+            val details = series?.details
+            return when {
+                last != null && !last.progress.watched -> WatchAction.Resume(last)
+                last != null -> details?.episodeAfter(last.episodeId)?.let(WatchAction::Next)
+                else -> details?.firstEpisode?.let(WatchAction::Start)
+            }
+        }
+}
+
+internal sealed interface WatchAction {
+    /** «ПРОДОЛЖИТЬ · 7 серия» — Плеер с тем же Переводом. */
+    data class Resume(
+        val lastWatched: LastWatched,
+    ) : WatchAction
+
+    /** «ПРОДОЛЖИТЬ · 8 серия» — прошлый досмотрен, Выбор Перевода для следующего. */
+    data class Next(
+        val episode: Episode,
+    ) : WatchAction
+
+    /** «НАЧАТЬ ПРОСМОТР» — Выбор Перевода для первого Эпизода. */
+    data class Start(
+        val episode: Episode,
+    ) : WatchAction
+}
 
 @HiltViewModel(assistedFactory = SeriesViewModel.Factory::class)
 internal class SeriesViewModel
@@ -28,13 +66,20 @@ internal class SeriesViewModel
     constructor(
         @Assisted private val seriesId: Int,
         private val repository: SeriesRepository,
+        library: LibraryRepository,
     ) : ViewModel() {
         private val refreshing = MutableStateFlow(true)
         private val error = MutableStateFlow<Throwable?>(null)
 
         val uiState: StateFlow<SeriesUiState> =
-            combine(repository.series(seriesId), refreshing, error, ::SeriesUiState)
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SeriesUiState())
+            combine(
+                repository.series(seriesId),
+                refreshing,
+                error,
+                library.progress(seriesId),
+                library.lastWatched(seriesId),
+                ::SeriesUiState,
+            ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SeriesUiState())
 
         init {
             refresh(force = false)

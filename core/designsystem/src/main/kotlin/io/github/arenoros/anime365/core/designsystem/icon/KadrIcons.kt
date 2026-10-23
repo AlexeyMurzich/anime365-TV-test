@@ -23,4 +23,15 @@ object KadrIcons {
     val PlayCircleOutline = R.drawable.ic_play_circle_outline
     val ExpandMore = R.drawable.ic_expand_more
     val Check = R.drawable.ic_check
+    val PlayArrow = R.drawable.ic_play_arrow
+    val Pause = R.drawable.ic_pause
+    val Replay10 = R.drawable.ic_replay_10
+    val Forward10 = R.drawable.ic_forward_10
+    val Fullscreen = R.drawable.ic_fullscreen
+    val FullscreenExit = R.drawable.ic_fullscreen_exit
+    val Settings = R.drawable.ic_settings
+    val Subtitles = R.drawable.ic_subtitles
+    val SkipNext = R.drawable.ic_skip_next
+    val Translate = R.drawable.ic_translate
+    val Logout = R.drawable.ic_logout
 }

@@ -81,6 +81,24 @@ dependencyAnalysis {
         bundle("activity") {
             includeGroup("androidx.activity")
         }
+        // Артефакты Media3 — одна библиотека; guava — в её API (ImmutableSet у параметров дорожек).
+        bundle("media3") {
+            includeGroup("androidx.media3")
+            includeDependency("com.google.guava:guava")
+        }
+        bundle("okhttp") {
+            includeGroup("com.squareup.okhttp3")
+            includeGroup("com.squareup.okio")
+        }
+        bundle("datastore") {
+            includeGroup("androidx.datastore")
+        }
+        bundle("navigation3") {
+            includeGroup("androidx.navigation3")
+        }
+        bundle("core") {
+            includeGroup("androidx.core")
+        }
     }
     issues {
         all {

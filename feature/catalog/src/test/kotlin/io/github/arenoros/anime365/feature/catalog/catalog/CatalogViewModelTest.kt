@@ -6,7 +6,7 @@ import io.github.arenoros.anime365.core.data.repository.CatalogRepository
 import io.github.arenoros.anime365.core.model.CatalogFilter
 import io.github.arenoros.anime365.core.model.Season
 import io.github.arenoros.anime365.core.model.SeriesSummary
-import io.github.arenoros.anime365.feature.catalog.MainDispatcherRule
+import io.github.arenoros.anime365.core.testing.MainDispatcherRule
 import io.github.arenoros.anime365.feature.catalog.navigation.CatalogKey
 import io.github.arenoros.anime365.feature.catalog.summary
 import kotlinx.coroutines.ExperimentalCoroutinesApi

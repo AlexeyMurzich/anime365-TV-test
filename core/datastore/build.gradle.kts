@@ -1,2 +1,9 @@
-// Модуль заведён по ADR 0002. Плагин подключается вместе с первым кодом (docs/roadmap.md):
-// dependency-analysis справедливо считает пустой Android-модуль лишним.
+plugins {
+    alias(libs.plugins.anime365.android.library)
+    alias(libs.plugins.anime365.hilt)
+}
+
+dependencies {
+    api(libs.kotlinx.coroutines.core)
+    implementation(libs.androidx.datastore.preferences)
+}

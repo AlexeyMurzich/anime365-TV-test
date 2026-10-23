@@ -3,7 +3,10 @@ package io.github.arenoros.anime365.core.designsystem.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,45 +31,67 @@ import io.github.arenoros.anime365.core.designsystem.tokens.KadrTypography
 
 /**
  * Кнопка EpisodeGrid. [wide] — трейлер, спешл, фильм: подпись с иконкой вместо номера.
- * [released] `false` — Эпизод ещё не вышел. Остальные состояния Kadr (просмотрен, текущий, новый)
- * появятся вместе с Прогрессом. [description] — что прочитает TalkBack вместо голого номера.
+ * [progress] — доля просмотренного, рисуется полоской в состоянии [EpisodeState.Current].
+ * [description] — что прочитает TalkBack вместо голого номера.
  */
 @Composable
 fun EpisodeButton(
     label: String,
     description: String,
-    released: Boolean,
+    state: EpisodeState,
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     wide: Boolean = false,
+    progress: Float = 0f,
 ) {
     val palette = KadrTheme.palette
-    Row(
+    val current = state == EpisodeState.Current
+    val color =
+        when (state) {
+            EpisodeState.Upcoming -> palette.inkDisabled
+            EpisodeState.Released -> palette.ink
+            EpisodeState.Current -> palette.onPrimaryContainer
+            EpisodeState.Watched -> palette.inkMuted
+        }
+    Box(
         modifier
             .heightIn(min = KadrLayout.TouchTarget)
             .clip(MaterialTheme.shapes.small)
-            .background(palette.surfaceVariant)
+            .background(if (current) palette.primaryContainer else palette.surfaceVariant)
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .clearAndSetSemantics { contentDescription = description }
-            .padding(horizontal = KadrSpacing.Space2),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space2, Alignment.CenterHorizontally),
+            .clearAndSetSemantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
     ) {
-        val color = if (released) palette.ink else palette.inkDisabled
-        if (wide) {
-            Icon(
-                painterResource(KadrIcons.PlayCircleOutline),
-                contentDescription = null,
-                Modifier.size(20.dp),
-                tint = color,
+        Row(
+            Modifier.padding(horizontal = KadrSpacing.Space2),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space1, Alignment.CenterHorizontally),
+        ) {
+            val icon =
+                when {
+                    state == EpisodeState.Watched -> KadrIcons.Check
+                    wide -> KadrIcons.PlayCircleOutline
+                    else -> null
+                }
+            if (icon != null) {
+                Icon(painterResource(icon), contentDescription = null, Modifier.size(18.dp), tint = color)
+            }
+            Text(
+                label,
+                color = color,
+                style = if (wide) MaterialTheme.typography.labelLarge else KadrTypography.Numeric,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
-        Text(
-            label,
-            color = color,
-            style = if (wide) MaterialTheme.typography.labelLarge else KadrTypography.Numeric,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (current) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth(progress.coerceIn(0f, 1f))
+                    .height(3.dp)
+                    .background(palette.primary),
+            )
+        }
     }
 }

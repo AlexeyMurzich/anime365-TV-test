@@ -1,9 +1,13 @@
 package io.github.arenoros.anime365.core.network
 
+import io.github.arenoros.anime365.core.network.model.AccessTokenDto
 import io.github.arenoros.anime365.core.network.model.ApiResponse
+import io.github.arenoros.anime365.core.network.model.EmbedDto
 import io.github.arenoros.anime365.core.network.model.SeriesDto
 import io.github.arenoros.anime365.core.network.model.TranslationDto
+import io.github.arenoros.anime365.core.network.model.UserDto
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -41,7 +45,40 @@ interface Anime365Api {
         @Query("fields") fields: String,
         @Query("limit") limit: Int,
     ): ApiResponse<List<TranslationDto>>
+
+    @GET("translations")
+    suspend fun episodeTranslations(
+        @Query("episodeId") episodeId: Int,
+        @Query("fields") fields: String = ApiFields.TRANSLATION,
+        @Query("limit") limit: Int = EPISODE_TRANSLATIONS_LIMIT,
+    ): ApiResponse<List<TranslationDto>>
+
+    /**
+     * Видеопоток. Без входа и без Подписки — ошибка 403. Токен API принимает только параметром
+     * запроса (ADR 0005).
+     */
+    @GET("translations/embed/{id}")
+    suspend fun embed(
+        @Path("id") translationId: Int,
+        @Query("access_token") accessToken: String,
+    ): ApiResponse<EmbedDto>
+
+    /** С недействительным Токеном отвечает гостем, а не ошибкой. */
+    @GET("me")
+    suspend fun me(
+        @Query("access_token") accessToken: String,
+    ): ApiResponse<UserDto>
+
+    /** Токен для сессии сайта: [cookie] — из WebView, где пользователь только что вошёл (ADR 0005). */
+    @GET("accessToken")
+    suspend fun accessToken(
+        @Header("Cookie") cookie: String,
+        @Query("app") app: String = BuildConfig.ANIME365_APP,
+    ): ApiResponse<AccessTokenDto>
 }
+
+// У одного Эпизода бывает до сотни Переводов (docs/api-notes.md); 1000 — максимум API.
+private const val EPISODE_TRANSLATIONS_LIMIT = 1000
 
 /** Без `fields` в каждом элементе приходят все внешние ссылки и описания (docs/api-notes.md). */
 object ApiFields {
@@ -54,4 +91,6 @@ object ApiFields {
     const val SERIES_DETAILS = "$SERIES_SUMMARY,posterUrl,url,genres,descriptions,links,episodes"
 
     const val FEED = "id,activeDateTime,seriesId,episode"
+
+    const val TRANSLATION = "id,episodeId,type,authorsSummary,qualityType,height,priority"
 }

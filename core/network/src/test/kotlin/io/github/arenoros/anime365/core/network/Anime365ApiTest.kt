@@ -109,6 +109,77 @@ class Anime365ApiTest {
             }
         }
 
+    @Test
+    fun episodeTranslationsParse() =
+        runTest {
+            enqueue("translations-episode-291395.json")
+
+            val translations = api.episodeTranslations(291395).unwrap()
+
+            assertEquals(listOf(5987618, 5987619, 5938574), translations.map { it.id })
+            assertEquals("", translations[0].authorsSummary)
+            assertEquals("subEn", translations[1].type)
+            assertEquals("bd", translations[1].qualityType)
+            assertEquals(1080, translations[1].height)
+            assertEquals(113831, translations[1].priority)
+            assertEquals(ApiFields.TRANSLATION, server.takeRequest().url.queryParameter("fields"))
+        }
+
+    @Test
+    fun embedSendsTokenAndParsesStream() =
+        runTest {
+            enqueue("embed-5987619.json")
+
+            val embed = api.embed(5987619, accessToken = "secret").unwrap()
+
+            assertEquals(listOf(1080, 720, 360), embed.stream.map { it.height })
+            assertEquals("/episodeTranslations/5987619.ass?willcache", embed.subtitlesUrl)
+            val request = server.takeRequest()
+            assertEquals("/api/translations/embed/5987619", request.url.encodedPath)
+            assertEquals("secret", request.url.queryParameter("access_token"))
+        }
+
+    @Test
+    fun embedWithoutLoginIsApiError() =
+        runTest {
+            enqueue("embed-403.json")
+
+            try {
+                api.embed(5987619, accessToken = "").unwrap()
+                fail("ожидалась ошибка 403")
+            } catch (e: ApiException) {
+                assertEquals(403, e.code)
+            }
+        }
+
+    @Test
+    fun meParsesGuestAndUser() =
+        runTest {
+            enqueue("me-guest.json")
+            enqueue("me-premium.json")
+
+            val guest = api.me("bad").unwrap()
+            val user = api.me("good").unwrap()
+
+            assertEquals(false, guest.isLogined)
+            assertEquals(true, user.isLogined)
+            assertEquals("Тестовый Пользователь", user.name)
+            assertEquals("2028-03-19 18:48:30", user.premiumUntil)
+        }
+
+    @Test
+    fun accessTokenSendsSessionCookie() =
+        runTest {
+            enqueue("access-token.json")
+
+            val token = api.accessToken(cookie = "PHPSESSID=abc", app = "app-id").unwrap()
+
+            assertEquals("test-token-not-real", token.accessToken)
+            val request = server.takeRequest()
+            assertEquals("PHPSESSID=abc", request.headers["Cookie"])
+            assertEquals("app-id", request.url.queryParameter("app"))
+        }
+
     private fun enqueue(fixture: String) {
         val body = javaClass.getResource("/api/$fixture")!!.readText()
         server.enqueue(

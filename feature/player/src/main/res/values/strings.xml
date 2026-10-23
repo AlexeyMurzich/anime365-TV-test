@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feature_player_translation">Перевод</string>
+    <string name="feature_player_settings">Настройки</string>
+    <string name="feature_player_play">Воспроизвести</string>
+    <string name="feature_player_pause">Пауза</string>
+    <string name="feature_player_rewind">Назад на 10 секунд</string>
+    <string name="feature_player_forward">Вперёд на 10 секунд</string>
+    <string name="feature_player_fullscreen">Во весь экран</string>
+    <string name="feature_player_exit_fullscreen">Выйти из полноэкранного режима</string>
+    <string name="feature_player_skip_opening">+85 с</string>
+    <string name="feature_player_skip_opening_description">Пропустить опенинг</string>
+    <string name="feature_player_position">Позиция</string>
+    <string name="feature_player_height">%1$dp</string>
+    <string name="feature_player_quality">Разрешение</string>
+    <string name="feature_player_speed">Скорость</string>
+    <string name="feature_player_speed_value">%1$s×</string>
+    <string name="feature_player_subtitles">Субтитры</string>
+    <string name="feature_player_next_episode">Следующая серия</string>
+    <string name="feature_player_next_in">Следующая серия через %1$d с</string>
+    <string name="feature_player_cancel">Отмена</string>
+    <string name="feature_player_needs_login">Чтобы смотреть видео, войдите в аккаунт anime365</string>
+    <string name="feature_player_needs_subscription">Видео доступно с подпиской anime365</string>
+    <string name="feature_player_log_in">Войти</string>
+    <string name="feature_player_more">Подробнее</string>
+    <string name="feature_player_no_same_team">У следующей серии нет перевода этой команды</string>
+</resources>

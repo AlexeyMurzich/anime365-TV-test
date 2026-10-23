@@ -4,6 +4,7 @@
     <string name="feature_catalog_catalog_title">Каталог</string>
     <string name="feature_catalog_search_placeholder">Поиск аниме</string>
 
+    <string name="feature_catalog_continue_watching">Продолжить просмотр</string>
     <string name="feature_catalog_new_episodes">Новые серии</string>
     <string name="feature_catalog_ongoing">Онгоинги</string>
     <string name="feature_catalog_season_top">Рейтинг сезона</string>

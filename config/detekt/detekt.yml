@@ -1,8 +1,11 @@
 # Поверх стандартного конфига detekt (buildUponDefaultConfig = true).
 naming:
   FunctionNaming:
+    # Конструктор для Hilt принимает зависимости, а не настройки: их число — не запах.
     ignoreAnnotated:
       - Composable
+      - Inject
+      - AssistedInject
   # Файл навигации фичи держит ключи и функцию регистрации экранов вместе (ADR 0009).
   MatchingDeclarationName:
     excludes:
@@ -21,8 +24,11 @@ complexity:
     functionThreshold: 8
     ignoreDefaultParameters: true
     # Экран Compose принимает состояние и все колбэки явно — так его можно показать в превью и тесте.
+    # Конструктор для Hilt принимает зависимости, а не настройки: их число — не запах.
     ignoreAnnotated:
       - Composable
+      - Inject
+      - AssistedInject
   # Приватные Composable — части одного экрана, методы DAO — декларации запросов.
   TooManyFunctions:
     ignorePrivate: true

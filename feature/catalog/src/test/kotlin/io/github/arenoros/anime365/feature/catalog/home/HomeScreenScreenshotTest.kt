@@ -2,7 +2,10 @@ package io.github.arenoros.anime365.feature.catalog.home
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
-import io.github.arenoros.anime365.feature.catalog.captureScreen
+import io.github.arenoros.anime365.core.model.ContinueWatching
+import io.github.arenoros.anime365.core.model.EpisodeProgress
+import io.github.arenoros.anime365.core.model.LastWatched
+import io.github.arenoros.anime365.core.testing.captureScreen
 import io.github.arenoros.anime365.feature.catalog.newEpisode
 import io.github.arenoros.anime365.feature.catalog.summary
 import org.junit.Rule
@@ -45,6 +48,34 @@ class HomeScreenScreenshotTest {
     fun contentDark() = capture("home_dark", content, darkTheme = true)
 
     @Test
+    fun withContinueWatching() =
+        capture(
+            "home_continue",
+            content.copy(
+                continueWatching =
+                    listOf(
+                        ContinueWatching(
+                            30414,
+                            "Провожающая в последний путь Фрирен",
+                            null,
+                            LastWatched(107, "7 серия", 1, EpisodeProgress(107, 600_000, 1_400_000, watched = false)),
+                        ),
+                        ContinueWatching(
+                            2,
+                            "Чёрный клевер",
+                            null,
+                            LastWatched(
+                                212,
+                                "12 серия",
+                                2,
+                                EpisodeProgress(212, 1_200_000, 1_400_000, watched = false),
+                            ),
+                        ),
+                    ),
+            ),
+        )
+
+    @Test
     fun loading() = capture("home_loading", HomeUiState())
 
     @Test
@@ -60,6 +91,8 @@ class HomeScreenScreenshotTest {
             state = state,
             onRefresh = {},
             onOpenSeries = {},
+            onOpenEpisode = { _, _ -> },
+            onPlay = { _, _, _ -> },
             onOpenSearch = {},
             onShowAllOngoing = {},
             zone = ZoneId.of("Europe/Moscow"),

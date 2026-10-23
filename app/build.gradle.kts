@@ -39,6 +39,7 @@ dependencies {
     implementation(projects.feature.account)
     implementation(projects.feature.catalog)
     implementation(projects.feature.library)
+    implementation(projects.feature.player)
     implementation(projects.feature.series)
 
     implementation(libs.androidx.activity.compose)
@@ -48,4 +49,7 @@ dependencies {
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.coil)
     implementation(libs.coil.network.okhttp)
+    // Граф Hilt собирается здесь: сгенерированный код видит OkHttpClient и CoroutineScope из :core.
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.okhttp)
 }

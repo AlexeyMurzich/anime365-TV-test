@@ -17,6 +17,8 @@ import io.github.arenoros.anime365.core.model.ReleaseStatus
 import io.github.arenoros.anime365.core.model.Series
 import io.github.arenoros.anime365.core.model.SeriesDetails
 import io.github.arenoros.anime365.core.model.SeriesSummary
+import io.github.arenoros.anime365.core.testing.ScreenshotOptions
+import io.github.arenoros.anime365.core.testing.captureScreen
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -98,5 +100,11 @@ class SeriesScreenScreenshotTest {
 
     @Composable
     private fun TestScreen(state: SeriesUiState) =
-        KadrTheme { SeriesScreen(state = state, onRetry = {}, onOpenGenre = {}, onBack = {}) }
+        KadrTheme {
+            SeriesScreen(state = state, onRetry = {}, onOpenGenre = {}, onOpenEpisode = {}, onPlay = {
+                _,
+                _,
+                ->
+            }, onBack = {})
+        }
 }

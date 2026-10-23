@@ -7,11 +7,14 @@ plugins {
 dependencies {
     implementation(projects.core.data)
     implementation(projects.core.model)
+    implementation(projects.core.ui)
+    implementation(libs.androidx.annotation)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.coil.compose)
 
+    testImplementation(projects.core.testing)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 

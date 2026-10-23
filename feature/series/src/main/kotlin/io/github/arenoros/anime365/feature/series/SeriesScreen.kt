@@ -4,12 +4,10 @@ import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,8 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -49,13 +47,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import io.github.arenoros.anime365.core.data.repository.SeriesUnavailableException
 import io.github.arenoros.anime365.core.designsystem.component.EmptyState
-import io.github.arenoros.anime365.core.designsystem.component.EpisodeButton
 import io.github.arenoros.anime365.core.designsystem.component.ErrorState
 import io.github.arenoros.anime365.core.designsystem.component.KadrTopAppBar
 import io.github.arenoros.anime365.core.designsystem.component.PosterStatus
@@ -68,13 +66,13 @@ import io.github.arenoros.anime365.core.designsystem.component.errorMessage
 import io.github.arenoros.anime365.core.designsystem.component.skeleton
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
-import io.github.arenoros.anime365.core.designsystem.theme.episodeColumns
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
 import io.github.arenoros.anime365.core.model.ReleaseStatus
 import io.github.arenoros.anime365.core.model.Series
 import io.github.arenoros.anime365.core.model.SeriesDetails
 import io.github.arenoros.anime365.core.model.SeriesSummary
+import io.github.arenoros.anime365.core.ui.EpisodeGrid
 
 private val POSTER_WIDTH = 120.dp
 
@@ -84,12 +82,21 @@ private enum class SeriesTab { Description, Episodes }
 internal fun SeriesRoute(
     seriesId: Int,
     onOpenGenre: (Int) -> Unit,
+    onOpenEpisode: (episodeId: Int) -> Unit,
+    onPlay: (episodeId: Int, translationId: Int) -> Unit,
     onBack: () -> Unit,
     viewModel: SeriesViewModel =
         hiltViewModel<SeriesViewModel, SeriesViewModel.Factory>(creationCallback = { it.create(seriesId) }),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    SeriesScreen(state = state, onRetry = viewModel::refresh, onOpenGenre = onOpenGenre, onBack = onBack)
+    SeriesScreen(
+        state = state,
+        onRetry = viewModel::refresh,
+        onOpenGenre = onOpenGenre,
+        onOpenEpisode = onOpenEpisode,
+        onPlay = onPlay,
+        onBack = onBack,
+    )
 }
 
 @Composable
@@ -97,6 +104,8 @@ internal fun SeriesScreen(
     state: SeriesUiState,
     onRetry: () -> Unit,
     onOpenGenre: (Int) -> Unit,
+    onOpenEpisode: (episodeId: Int) -> Unit,
+    onPlay: (episodeId: Int, translationId: Int) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -127,7 +136,7 @@ internal fun SeriesScreen(
                 }
 
                 else -> {
-                    SeriesContent(series, state, onRetry, onOpenGenre)
+                    SeriesContent(series, state, onRetry, onOpenGenre, onOpenEpisode, onPlay)
                 }
             }
         }
@@ -140,54 +149,110 @@ private fun SeriesContent(
     state: SeriesUiState,
     onRetry: () -> Unit,
     onOpenGenre: (Int) -> Unit,
+    onOpenEpisode: (episodeId: Int) -> Unit,
+    onPlay: (episodeId: Int, translationId: Int) -> Unit,
 ) {
     var tab by rememberSaveable { mutableStateOf(SeriesTab.Description) }
     val details = series.details
-    BoxWithConstraints {
-        val columns = episodeColumns(maxWidth)
-        LazyColumn(contentPadding = PaddingValues(bottom = KadrSpacing.Space6)) {
-            if (state.error != null && details != null) item { StaleDataBanner(state.error) }
-            item { Header(series.summary, details) }
-            if (details != null && details.genres.isNotEmpty()) item { Genres(details, onOpenGenre) }
-            item {
-                PrimaryTabRow(selectedTabIndex = tab.ordinal, containerColor = KadrTheme.palette.surface) {
-                    SeriesTab.entries.forEach { entry ->
-                        Tab(
-                            selected = tab == entry,
-                            onClick = { tab = entry },
-                            text = {
-                                Text(
-                                    stringResource(
-                                        if (entry == SeriesTab.Description) {
-                                            R.string.feature_series_tab_description
-                                        } else {
-                                            R.string.feature_series_tab_episodes
-                                        },
-                                    ).uppercase(),
-                                )
-                            },
-                        )
-                    }
-                }
-            }
-            when {
-                details == null && state.error != null -> {
-                    item { ErrorState(errorMessage(state.error), onRetry = onRetry) }
-                }
-
-                details == null -> {
-                    item { TextPlaceholder() }
-                }
-
-                tab == SeriesTab.Description -> {
-                    description(details)
-                }
-
-                else -> {
-                    episodes(details, series.summary, columns)
+    LazyColumn(contentPadding = PaddingValues(bottom = KadrSpacing.Space6)) {
+        if (state.error != null && details != null) item { StaleDataBanner(state.error) }
+        item { Header(series.summary, details) }
+        state.watchAction?.let { action -> item { WatchButton(action, onOpenEpisode, onPlay) } }
+        if (details != null && details.genres.isNotEmpty()) item { Genres(details, onOpenGenre) }
+        item {
+            PrimaryTabRow(selectedTabIndex = tab.ordinal, containerColor = KadrTheme.palette.surface) {
+                SeriesTab.entries.forEach { entry ->
+                    Tab(
+                        selected = tab == entry,
+                        onClick = { tab = entry },
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (entry == SeriesTab.Description) {
+                                        R.string.feature_series_tab_description
+                                    } else {
+                                        R.string.feature_series_tab_episodes
+                                    },
+                                ).uppercase(),
+                            )
+                        },
+                    )
                 }
             }
         }
+        when {
+            details == null && state.error != null -> {
+                item { ErrorState(errorMessage(state.error), onRetry = onRetry) }
+            }
+
+            details == null -> {
+                item { TextPlaceholder() }
+            }
+
+            tab == SeriesTab.Description -> {
+                description(details)
+            }
+
+            else -> {
+                item {
+                    EpisodeGrid(
+                        details = details,
+                        episodeCount = series.summary.episodeCount,
+                        ongoing = series.summary.status == ReleaseStatus.Ongoing,
+                        progress = state.progress,
+                        onEpisodeClick = { onOpenEpisode(it.id) },
+                        modifier = Modifier.padding(top = KadrSpacing.Space2),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WatchButton(
+    action: WatchAction,
+    onOpenEpisode: (episodeId: Int) -> Unit,
+    onPlay: (episodeId: Int, translationId: Int) -> Unit,
+) {
+    val label =
+        when (action) {
+            is WatchAction.Resume -> {
+                stringResource(
+                    R.string.feature_series_continue_watching,
+                    action.lastWatched.episodeLabel,
+                )
+            }
+
+            is WatchAction.Next -> {
+                stringResource(R.string.feature_series_continue_watching, action.episode.label)
+            }
+
+            is WatchAction.Start -> {
+                stringResource(R.string.feature_series_start_watching)
+            }
+        }
+    Button(
+        onClick = {
+            when (action) {
+                is WatchAction.Resume -> onPlay(action.lastWatched.episodeId, action.lastWatched.translationId)
+                is WatchAction.Next -> onOpenEpisode(action.episode.id)
+                is WatchAction.Start -> onOpenEpisode(action.episode.id)
+            }
+        },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(KadrTheme.palette.surface)
+                .padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space2),
+    ) {
+        Icon(painterResource(KadrIcons.PlayArrow), contentDescription = null)
+        Text(
+            label.uppercase(),
+            Modifier.padding(start = KadrSpacing.Space2),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -289,110 +354,6 @@ private fun LazyListScope.description(details: SeriesDetails) {
             }
         }
     }
-}
-
-private fun LazyListScope.episodes(
-    details: SeriesDetails,
-    summary: SeriesSummary,
-    columns: Int,
-) {
-    val grid = details.episodeGrid(summary.episodeCount)
-    if (grid.special.isEmpty() && grid.numbered.isEmpty()) {
-        item { EmptyState(stringResource(R.string.feature_series_no_episodes)) }
-        return
-    }
-    // M1: касание Эпизода ничего не делает — Выбор Перевода и Плеер появятся в M2.
-    items(grid.special.chunked((columns / 2).coerceAtLeast(1))) { row ->
-        GridRow {
-            row.forEach { episode ->
-                EpisodeButton(
-                    label = episode.label,
-                    description = episode.label,
-                    released = true,
-                    onClick = null,
-                    modifier = Modifier.weight(2f),
-                    wide = true,
-                )
-            }
-            repeat(columns / 2 - row.size) { Spacer(Modifier.weight(2f)) }
-        }
-    }
-    item {
-        var range by rememberSaveable {
-            mutableIntStateOf(
-                if (summary.status ==
-                    ReleaseStatus.Ongoing
-                ) {
-                    grid.ranges.lastIndex
-                } else {
-                    0
-                },
-            )
-        }
-        Column {
-            if (grid.ranges.isNotEmpty()) RangeChips(grid, range, onSelect = { range = it })
-            val cells = grid.ranges.getOrNull(range)?.let { grid.numbered.slice(it) } ?: grid.numbered
-            cells.chunked(columns).forEach { row ->
-                GridRow {
-                    row.forEach { cell -> NumberedEpisodeButton(cell, Modifier.weight(1f)) }
-                    repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RangeChips(
-    grid: EpisodeGrid,
-    selected: Int,
-    onSelect: (Int) -> Unit,
-) {
-    FlowRow(
-        Modifier.padding(horizontal = KadrSpacing.Space4),
-        horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space2),
-    ) {
-        grid.ranges.forEachIndexed { index, range ->
-            val label =
-                stringResource(
-                    R.string.feature_series_episode_range,
-                    grid.numbered[range.first].number,
-                    grid.numbered[range.last].number,
-                )
-            FilterChip(selected = index == selected, onClick = { onSelect(index) }, label = { Text(label) })
-        }
-    }
-}
-
-@Composable
-private fun NumberedEpisodeButton(
-    cell: EpisodeCell,
-    modifier: Modifier,
-) {
-    when (cell) {
-        is EpisodeCell.Released -> {
-            EpisodeButton(cell.number, cell.episode.label, released = true, onClick = null, modifier = modifier)
-        }
-
-        is EpisodeCell.Upcoming -> {
-            EpisodeButton(
-                cell.number,
-                stringResource(R.string.feature_series_episode_upcoming, cell.number),
-                released = false,
-                onClick = null,
-                modifier = modifier,
-            )
-        }
-    }
-}
-
-@Composable
-private fun GridRow(content: @Composable RowScope.() -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space1),
-        horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space2),
-        content = content,
-    )
 }
 
 @Composable

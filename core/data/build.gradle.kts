@@ -5,9 +5,12 @@ plugins {
 
 dependencies {
     api(projects.core.model)
+    // @ApplicationScope — квалификатор javax.inject в публичном API.
+    api(libs.hilt.android)
     api(libs.androidx.paging.common)
     api(libs.kotlinx.coroutines.core)
     implementation(projects.core.database)
+    implementation(projects.core.datastore)
     implementation(projects.core.network)
 
     testImplementation(libs.androidx.room.runtime)

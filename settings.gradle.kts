@@ -42,6 +42,7 @@ include(":core:data")
 include(":core:designsystem")
 include(":core:ui")
 include(":core:player")
+include(":core:testing")
 
 include(":feature:catalog")
 include(":feature:series")

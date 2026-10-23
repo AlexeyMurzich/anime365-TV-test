@@ -109,3 +109,15 @@ data class FeedEpisodeWithSeries(
     @Relation(parentColumn = "seriesId", entityColumn = "id")
     val series: SeriesEntity?,
 )
+
+/** Переводы одного Эпизода. [position] — порядок сайта (`priority` по убыванию). */
+@Entity(tableName = "translations", indices = [Index("episodeId", "position")])
+data class TranslationEntity(
+    @PrimaryKey val id: Int,
+    val episodeId: Int,
+    val type: String,
+    val team: String,
+    val source: String?,
+    val height: Int,
+    val position: Int,
+)

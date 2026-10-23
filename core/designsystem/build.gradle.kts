@@ -6,6 +6,8 @@ plugins {
 
 dependencies {
     api(libs.androidx.compose.material3)
+    // Лист Выбора Перевода — сцена Navigation 3 (BottomSheetSceneStrategy).
+    api(libs.androidx.navigation3.ui)
     implementation(libs.androidx.annotation)
     implementation(libs.coil.compose)
 

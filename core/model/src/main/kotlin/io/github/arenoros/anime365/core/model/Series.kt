@@ -61,3 +61,10 @@ data class Episode(
     val label: String,
     val type: String,
 )
+
+/** Следующий Эпизод в порядке сайта: после 1-й серии — 2-я, после трейлера — 1-я. */
+fun SeriesDetails.episodeAfter(episodeId: Int): Episode? =
+    episodes.indexOfFirst { it.id == episodeId }.takeIf { it >= 0 }?.let { episodes.getOrNull(it + 1) }
+
+/** С чего начинать: первый Эпизод основного типа аниме, а не трейлер перед ним. */
+val SeriesDetails.firstEpisode: Episode? get() = episodes.firstOrNull { it.type == type } ?: episodes.firstOrNull()

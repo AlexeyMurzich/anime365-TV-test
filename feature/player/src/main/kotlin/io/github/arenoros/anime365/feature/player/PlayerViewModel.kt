@@ -1,0 +1,295 @@
+package io.github.arenoros.anime365.feature.player
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
+import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.arenoros.anime365.core.data.di.ApplicationScope
+import io.github.arenoros.anime365.core.data.repository.LibraryRepository
+import io.github.arenoros.anime365.core.data.repository.NotLoggedInException
+import io.github.arenoros.anime365.core.data.repository.Playback
+import io.github.arenoros.anime365.core.data.repository.SeriesRepository
+import io.github.arenoros.anime365.core.data.repository.SubscriptionRequiredException
+import io.github.arenoros.anime365.core.data.repository.TranslationRepository
+import io.github.arenoros.anime365.core.model.Episode
+import io.github.arenoros.anime365.core.model.EpisodeProgress
+import io.github.arenoros.anime365.core.model.Series
+import io.github.arenoros.anime365.core.model.Translation
+import io.github.arenoros.anime365.core.model.TranslationChoice
+import io.github.arenoros.anime365.core.model.VideoStream
+import io.github.arenoros.anime365.core.model.episodeAfter
+import io.github.arenoros.anime365.core.model.ofTeam
+import io.github.arenoros.anime365.core.player.PlayerMedia
+import io.github.arenoros.anime365.core.player.VideoPlayer
+import io.github.arenoros.anime365.feature.player.navigation.PlayerKey
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+internal sealed interface PlayerStatus {
+    data object Loading : PlayerStatus
+
+    data object Playing : PlayerStatus
+
+    data object NeedsLogin : PlayerStatus
+
+    data object NeedsSubscription : PlayerStatus
+
+    data class Failed(
+        val error: Throwable,
+    ) : PlayerStatus
+}
+
+internal sealed interface PlayerEvent {
+    /** У следующего Эпизода нет Перевода той же Команды: снекбар и Выбор Перевода (docs/screens.md). */
+    data class ChooseTranslation(
+        val episodeId: Int,
+    ) : PlayerEvent
+}
+
+/** [qualities] — доступные Разрешения, от большего к меньшему. [nextCountdown] — секунды до следующей серии. */
+internal data class PlayerUiState(
+    val series: Series? = null,
+    val episode: Episode? = null,
+    val translation: Translation? = null,
+    val status: PlayerStatus = PlayerStatus.Loading,
+    val qualities: List<Int> = emptyList(),
+    val quality: Int? = null,
+    val hasSubtitles: Boolean = false,
+    val subtitlesEnabled: Boolean = true,
+    val speed: Float = 1f,
+    val progress: Map<Int, EpisodeProgress> = emptyMap(),
+    val nextCountdown: Int? = null,
+) {
+    val nextEpisode: Episode? get() = episode?.let { series?.details?.episodeAfter(it.id) }
+}
+
+// docs/roadmap.md, M2: 1080p по Wi-Fi, 720p по мобильной сети.
+private const val WIFI_HEIGHT = 1080
+private const val MOBILE_HEIGHT = 720
+
+/** Самое большое Разрешение не выше целевого; если все выше — самое маленькое. */
+internal fun pickQuality(
+    heights: List<Int>,
+    metered: Boolean,
+): Int? {
+    val target = if (metered) MOBILE_HEIGHT else WIFI_HEIGHT
+    return heights.filter { it <= target }.maxOrNull() ?: heights.minOrNull()
+}
+
+private const val SAVE_INTERVAL_MS = 10_000L
+private const val NEXT_EPISODE_COUNTDOWN_SECONDS = 5
+private const val SECOND_MS = 1_000L
+
+@HiltViewModel(assistedFactory = PlayerViewModel.Factory::class)
+internal class PlayerViewModel
+    @AssistedInject
+    constructor(
+        @Assisted private val key: PlayerKey,
+        private val seriesRepository: SeriesRepository,
+        private val translationRepository: TranslationRepository,
+        private val libraryRepository: LibraryRepository,
+        val videoPlayer: VideoPlayer,
+        @param:ApplicationScope private val applicationScope: CoroutineScope,
+    ) : ViewModel() {
+        private val _uiState = MutableStateFlow(PlayerUiState())
+        val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+        private val eventChannel = Channel<PlayerEvent>(Channel.BUFFERED)
+        val events: Flow<PlayerEvent> = eventChannel.receiveAsFlow()
+
+        private var episodeId = key.episodeId
+        private var translationId = key.translationId
+        private var stream: VideoStream? = null
+        private var session = 0
+        private var countdown: Job? = null
+
+        init {
+            viewModelScope.launch {
+                libraryRepository.progress(key.seriesId).collect { progress ->
+                    _uiState.update { it.copy(progress = progress) }
+                }
+            }
+            viewModelScope.launch { videoPlayer.ended.collect { onEnded() } }
+            viewModelScope.launch {
+                // Пока играет — раз в 10 секунд; пауза — тоже повод записать позицию.
+                videoPlayer.playing.collectLatest { playing ->
+                    snapshot()?.let { libraryRepository.save(it) }
+                    while (playing) {
+                        delay(SAVE_INTERVAL_MS)
+                        snapshot()?.let { libraryRepository.save(it) }
+                    }
+                }
+            }
+            start()
+        }
+
+        fun retry() = start()
+
+        /** После Входа или оформления Подписки экран снова видим — пробуем ещё раз. */
+        fun retryIfBlocked() {
+            val status = _uiState.value.status
+            if (status == PlayerStatus.NeedsLogin || status == PlayerStatus.NeedsSubscription) start()
+        }
+
+        fun playNext() {
+            cancelAutoplay()
+            val next = _uiState.value.nextEpisode ?: return
+            val current = _uiState.value.translation ?: return
+            viewModelScope.launch {
+                val translations = translationRepository.load(next.id).getOrElse { return@launch fail(it) }
+                val match = translations.ofTeam(TranslationChoice(current.kind, current.team), current.source)
+                if (match == null) {
+                    eventChannel.send(PlayerEvent.ChooseTranslation(next.id))
+                } else {
+                    saveNow()
+                    episodeId = next.id
+                    translationId = match.id
+                    start()
+                }
+            }
+        }
+
+        fun cancelAutoplay() {
+            countdown?.cancel()
+            _uiState.update { it.copy(nextCountdown = null) }
+        }
+
+        fun selectQuality(height: Int) {
+            val url = stream?.qualities?.firstOrNull { it.height == height }?.url
+            val media = url?.let { mediaOf(_uiState.value, it) } ?: return
+            videoPlayer.switchVideo(media)
+            _uiState.update { it.copy(quality = height) }
+        }
+
+        fun setSubtitlesEnabled(enabled: Boolean) {
+            videoPlayer.subtitlesEnabled = enabled
+            _uiState.update { it.copy(subtitlesEnabled = enabled) }
+        }
+
+        fun setSpeed(speed: Float) {
+            videoPlayer.speed = speed
+            _uiState.update { it.copy(speed = speed) }
+        }
+
+        /** Свёрнуто или закрыто: позицию на диск сразу, не дожидаясь очередных 10 секунд. */
+        fun saveNow() {
+            val playback = snapshot() ?: return
+            applicationScope.launch { libraryRepository.save(playback) }
+        }
+
+        override fun onCleared() {
+            saveNow()
+            videoPlayer.stop(session)
+        }
+
+        private fun start() {
+            cancelAutoplay()
+            _uiState.update { it.copy(status = PlayerStatus.Loading) }
+            viewModelScope.launch {
+                // Без названия и Эпизода нечего показать ни на экране, ни в уведомлении.
+                seriesRepository.refresh(key.seriesId, force = false)
+                val series = seriesRepository.series(key.seriesId).first()
+                val episode = series?.details?.episodes?.firstOrNull { it.id == episodeId }
+                val translations = translationRepository.load(episodeId).getOrElse { return@launch fail(it) }
+                val translation = translations.firstOrNull { it.id == translationId }
+                if (series == null || episode == null || translation == null) {
+                    return@launch fail(IllegalStateException("Translation $translationId of $episodeId is gone"))
+                }
+                val stream = translationRepository.stream(translationId).getOrElse { return@launch fail(it) }
+                val height = pickQuality(stream.qualities.map { it.height }, videoPlayer.isMeteredNetwork)
+                val url = stream.qualities.first { it.height == height }.url
+                // Досмотренный Эпизод открывается с начала.
+                val start = libraryRepository.progressOf(episodeId)?.takeUnless { it.watched }?.positionMs ?: 0
+                this@PlayerViewModel.stream = stream
+                session = videoPlayer.play(media(series, episode, translation, url), start)
+                videoPlayer.subtitlesEnabled = _uiState.value.subtitlesEnabled
+                videoPlayer.speed = _uiState.value.speed
+                _uiState.update {
+                    it.copy(
+                        series = series,
+                        episode = episode,
+                        translation = translation,
+                        status = PlayerStatus.Playing,
+                        qualities = stream.qualities.map { quality -> quality.height },
+                        quality = height,
+                        hasSubtitles = stream.subtitlesUrl != null,
+                    )
+                }
+                // Сразу запоминает выбранный Перевод — им будет отмечен Перевод следующего Эпизода.
+                libraryRepository.save(Playback(series.summary, episode, translation, start, 0))
+            }
+        }
+
+        private fun onEnded() {
+            saveNow()
+            if (_uiState.value.nextEpisode == null) return
+            countdown =
+                viewModelScope.launch {
+                    for (seconds in NEXT_EPISODE_COUNTDOWN_SECONDS downTo 1) {
+                        _uiState.update { it.copy(nextCountdown = seconds) }
+                        delay(SECOND_MS)
+                    }
+                    playNext()
+                }
+        }
+
+        private fun fail(error: Throwable) {
+            val status =
+                when (error) {
+                    is NotLoggedInException -> PlayerStatus.NeedsLogin
+                    is SubscriptionRequiredException -> PlayerStatus.NeedsSubscription
+                    else -> PlayerStatus.Failed(error)
+                }
+            _uiState.update { it.copy(status = status) }
+        }
+
+        private fun snapshot(): Playback? {
+            val state = _uiState.value.takeIf { it.status == PlayerStatus.Playing }
+            val (series, episode, translation) = state?.playing() ?: return null
+            return Playback(series.summary, episode, translation, videoPlayer.positionMs, videoPlayer.durationMs)
+        }
+
+        private fun mediaOf(
+            state: PlayerUiState,
+            url: String,
+        ): PlayerMedia? =
+            state.playing()?.let { (series, episode, translation) ->
+                media(series, episode, translation, url)
+            }
+
+        /** Что играет: аниме, Эпизод и Перевод — когда известно всё три. */
+        private fun PlayerUiState.playing(): Triple<Series, Episode, Translation>? =
+            if (series != null && episode != null && translation != null) Triple(series, episode, translation) else null
+
+        private fun media(
+            series: Series,
+            episode: Episode,
+            translation: Translation,
+            url: String,
+        ): PlayerMedia =
+            PlayerMedia(
+                videoUrl = url,
+                subtitlesUrl = stream?.subtitlesUrl,
+                title = series.summary.title,
+                subtitle = listOf(episode.label, translation.team).filter { it.isNotEmpty() }.joinToString(" · "),
+                artworkUrl = series.details?.largePosterUrl ?: series.summary.posterUrl,
+            )
+
+        @AssistedFactory
+        interface Factory {
+            fun create(key: PlayerKey): PlayerViewModel
+        }
+    }

@@ -17,6 +17,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -29,6 +30,7 @@ import io.github.arenoros.anime365.core.designsystem.component.ErrorState
 import io.github.arenoros.anime365.core.designsystem.component.KadrSearchButton
 import io.github.arenoros.anime365.core.designsystem.component.KadrTopAppBar
 import io.github.arenoros.anime365.core.designsystem.component.ListItemPlaceholder
+import io.github.arenoros.anime365.core.designsystem.component.PosterCard
 import io.github.arenoros.anime365.core.designsystem.component.PosterCardPlaceholder
 import io.github.arenoros.anime365.core.designsystem.component.RankingListItem
 import io.github.arenoros.anime365.core.designsystem.component.SectionHeader
@@ -36,6 +38,7 @@ import io.github.arenoros.anime365.core.designsystem.component.StaleDataBanner
 import io.github.arenoros.anime365.core.designsystem.component.errorMessage
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
+import io.github.arenoros.anime365.core.model.ContinueWatching
 import io.github.arenoros.anime365.core.model.NewEpisode
 import io.github.arenoros.anime365.core.model.SeriesSummary
 import io.github.arenoros.anime365.feature.catalog.R
@@ -52,23 +55,35 @@ private val DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 @Composable
 internal fun HomeRoute(
     onOpenSeries: (Int) -> Unit,
+    onOpenEpisode: (seriesId: Int, episodeId: Int) -> Unit,
+    onPlay: (seriesId: Int, episodeId: Int, translationId: Int) -> Unit,
     onOpenSearch: () -> Unit,
     onShowAllOngoing: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is HomeEvent.Play -> onPlay(event.seriesId, event.episodeId, event.translationId)
+                is HomeEvent.ChooseTranslation -> onOpenEpisode(event.seriesId, event.episodeId)
+            }
+        }
+    }
     HomeScreen(
         state = state,
         onRefresh = viewModel::refresh,
         onOpenSeries = onOpenSeries,
+        onOpenEpisode = viewModel::openEpisode,
+        onPlay = onPlay,
         onOpenSearch = onOpenSearch,
         onShowAllOngoing = onShowAllOngoing,
     )
 }
 
 /**
- * Главная без «Продолжить просмотр»: он появится вместе с Прогрессом (M2).
- * [zone] и [today] — параметры ради скриншот-тестов с фиксированной датой.
+ * Главная: «Продолжить просмотр» — сразу Плеер с тем же Переводом; Новые серии — Выбор Перевода с
+ * отмеченной Командой прошлого Эпизода. [zone] и [today] — ради скриншот-тестов с фиксированной датой.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +91,8 @@ internal fun HomeScreen(
     state: HomeUiState,
     onRefresh: () -> Unit,
     onOpenSeries: (Int) -> Unit,
+    onOpenEpisode: (seriesId: Int, episodeId: Int) -> Unit,
+    onPlay: (seriesId: Int, episodeId: Int, translationId: Int) -> Unit,
     onOpenSearch: () -> Unit,
     onShowAllOngoing: () -> Unit,
     modifier: Modifier = Modifier,
@@ -95,34 +112,75 @@ internal fun HomeScreen(
             if (state.isEmpty && state.error != null) {
                 ErrorState(errorMessage(state.error), onRetry = onRefresh)
             } else {
-                HomeContent(state, zone, today, onOpenSeries, onOpenSearch, onShowAllOngoing)
+                HomeContent(
+                    state,
+                    zone,
+                    today,
+                    HomeActions(onOpenSeries, onOpenEpisode, onPlay, onOpenSearch, onShowAllOngoing),
+                )
             }
         }
     }
 }
+
+private class HomeActions(
+    val onOpenSeries: (Int) -> Unit,
+    val onOpenEpisode: (seriesId: Int, episodeId: Int) -> Unit,
+    val onPlay: (seriesId: Int, episodeId: Int, translationId: Int) -> Unit,
+    val onOpenSearch: () -> Unit,
+    val onShowAllOngoing: () -> Unit,
+)
 
 @Composable
 private fun HomeContent(
     state: HomeUiState,
     zone: ZoneId,
     today: LocalDate,
-    onOpenSeries: (Int) -> Unit,
-    onOpenSearch: () -> Unit,
-    onShowAllOngoing: () -> Unit,
+    actions: HomeActions,
 ) {
     val days = remember(state.newEpisodes, zone) { state.newEpisodes.groupByDay(zone) }
     LazyColumn(contentPadding = PaddingValues(bottom = KadrSpacing.Space6)) {
         item(key = "search") {
             KadrSearchButton(
                 placeholder = stringResource(R.string.feature_catalog_search_placeholder),
-                onClick = onOpenSearch,
+                onClick = actions.onOpenSearch,
                 modifier = Modifier.padding(KadrSpacing.Space4),
             )
         }
         if (state.error != null) item(key = "stale") { StaleDataBanner(state.error) }
-        newEpisodes(days, state.isRefreshing, today, zone, onOpenSeries)
-        ongoing(state.ongoing, state.isRefreshing, onOpenSeries, onShowAllOngoing)
-        seasonTop(state.seasonTop, state.isRefreshing, onOpenSeries)
+        continueWatching(state.continueWatching, actions.onPlay)
+        newEpisodes(days, state.isRefreshing, today, zone, actions.onOpenEpisode)
+        ongoing(state.ongoing, state.isRefreshing, actions.onOpenSeries, actions.onShowAllOngoing)
+        seasonTop(state.seasonTop, state.isRefreshing, actions.onOpenSeries)
+    }
+}
+
+/** Блока нет, если продолжать нечего (docs/screens.md). */
+private fun LazyListScope.continueWatching(
+    cards: List<ContinueWatching>,
+    onPlay: (seriesId: Int, episodeId: Int, translationId: Int) -> Unit,
+) {
+    if (cards.isEmpty()) return
+    item(key = "continue-header") { SectionHeader(stringResource(R.string.feature_catalog_continue_watching)) }
+    item(key = "continue-row") {
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = KadrSpacing.Space4),
+            horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space2),
+        ) {
+            items(cards, key = { "continue-${it.seriesId}" }) { card ->
+                val last = card.lastWatched
+                PosterCard(
+                    imageUrl = card.posterUrl,
+                    title = card.seriesTitle,
+                    meta = last.episodeLabel,
+                    score = null,
+                    status = null,
+                    onClick = { onPlay(card.seriesId, last.episodeId, last.translationId) },
+                    modifier = Modifier.width(POSTER_ROW_WIDTH),
+                    progress = last.progress.fraction,
+                )
+            }
+        }
     }
 }
 
@@ -131,7 +189,7 @@ private fun LazyListScope.newEpisodes(
     isRefreshing: Boolean,
     today: LocalDate,
     zone: ZoneId,
-    onOpenSeries: (Int) -> Unit,
+    onOpenEpisode: (seriesId: Int, episodeId: Int) -> Unit,
 ) {
     if (days.isEmpty() && !isRefreshing) return
     item(key = "new-header") { SectionHeader(stringResource(R.string.feature_catalog_new_episodes)) }
@@ -142,7 +200,7 @@ private fun LazyListScope.newEpisodes(
     days.forEach { day ->
         item(key = "day-${day.date}") { DayHeader(day.date, today) }
         items(day.episodes, key = { "episode-${it.episodeId}" }) { episode ->
-            NewEpisodeRow(episode, zone, onOpenSeries)
+            NewEpisodeRow(episode, zone, onOpenEpisode)
         }
     }
 }
@@ -151,15 +209,14 @@ private fun LazyListScope.newEpisodes(
 private fun NewEpisodeRow(
     episode: NewEpisode,
     zone: ZoneId,
-    onOpenSeries: (Int) -> Unit,
+    onOpenEpisode: (seriesId: Int, episodeId: Int) -> Unit,
 ) {
-    // M1: касание ведёт на экран Аниме; в M2 — сразу в Плеер с запомненным Переводом.
     EpisodeFeedRow(
         imageUrl = episode.posterUrl,
         episodeLabel = episode.label,
         title = episode.seriesTitle,
         time = TIME_FORMAT.format(episode.releasedAt.atZone(zone)),
-        onClick = { onOpenSeries(episode.seriesId) },
+        onClick = { onOpenEpisode(episode.seriesId, episode.episodeId) },
     )
 }
 

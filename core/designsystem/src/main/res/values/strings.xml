@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="core_designsystem_back">Назад</string>
+    <string name="core_designsystem_close">Закрыть</string>
     <string name="core_designsystem_clear">Очистить</string>
     <string name="core_designsystem_retry">Повторить</string>
     <string name="core_designsystem_all">Все</string>

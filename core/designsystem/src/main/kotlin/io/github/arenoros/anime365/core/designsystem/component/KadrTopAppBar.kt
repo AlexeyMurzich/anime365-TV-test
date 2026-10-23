@@ -24,6 +24,7 @@ fun KadrTopAppBar(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
+    closeIcon: Boolean = false,
 ) {
     val palette = KadrTheme.palette
     TopAppBar(
@@ -32,7 +33,11 @@ fun KadrTopAppBar(
         navigationIcon = {
             if (onBack != null) {
                 IconButton(onClick = onBack) {
-                    Icon(painterResource(KadrIcons.ArrowBack), stringResource(R.string.core_designsystem_back))
+                    if (closeIcon) {
+                        Icon(painterResource(KadrIcons.Close), stringResource(R.string.core_designsystem_close))
+                    } else {
+                        Icon(painterResource(KadrIcons.ArrowBack), stringResource(R.string.core_designsystem_back))
+                    }
                 }
             }
         },

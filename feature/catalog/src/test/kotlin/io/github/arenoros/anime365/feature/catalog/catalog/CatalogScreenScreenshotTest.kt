@@ -9,7 +9,7 @@ import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import io.github.arenoros.anime365.core.model.CatalogFilter
 import io.github.arenoros.anime365.core.model.SeriesSummary
 import io.github.arenoros.anime365.core.model.SeriesType
-import io.github.arenoros.anime365.feature.catalog.captureScreen
+import io.github.arenoros.anime365.core.testing.captureScreen
 import io.github.arenoros.anime365.feature.catalog.summary
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Rule

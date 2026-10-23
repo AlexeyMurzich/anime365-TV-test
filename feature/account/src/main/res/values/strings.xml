@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="feature_account_profile_title">Профиль</string>
+    <string name="feature_account_guest_hint">Смотреть видео можно только со входом и подпиской anime365</string>
+    <string name="feature_account_log_in">Войти</string>
+    <string name="feature_account_log_out">Выйти</string>
+    <string name="feature_account_subscription_until">Подписка активна до %1$s</string>
+    <string name="feature_account_no_subscription">Нет подписки</string>
+    <string name="feature_account_subscribe_on_site">Оформить на сайте</string>
+    <string name="feature_account_local_library_hint">Список и Прогресс хранятся только на этом устройстве</string>
+
+    <string name="feature_account_login_title">Вход</string>
+    <string name="feature_account_login_failed">Не удалось войти</string>
+
+    <string name="feature_account_subscription_title">Нужна подписка</string>
+    <string name="feature_account_subscription_text">Видео доступно с подпиской anime365. Оформить её можно на сайте — в приложении оплаты нет.</string>
+    <string name="feature_account_subscription_refresh">Я уже оформил — обновить</string>
+    <string name="feature_account_subscription_still_missing">Подписка пока не видна. Если только что оформили — попробуйте через минуту.</string>
 </resources>

@@ -8,8 +8,25 @@
     <string name="feature_series_share">Поделиться</string>
     <string name="feature_series_unavailable">Аниме недоступно на сайте</string>
     <string name="feature_series_no_description">Описания пока нет</string>
-    <string name="feature_series_no_episodes">Серии ещё не вышли</string>
     <string name="feature_series_episodes_count">%1$d эп.</string>
-    <string name="feature_series_episode_upcoming">%1$s серия, ещё не вышла</string>
-    <string name="feature_series_episode_range">%1$s–%2$s</string>
+    <string name="feature_series_start_watching">Начать просмотр</string>
+    <string name="feature_series_continue_watching">Продолжить · %1$s</string>
+
+    <string name="feature_series_translations_title">Выбор перевода</string>
+    <string name="feature_series_translations_empty">У этой серии пока нет переводов</string>
+    <string name="feature_series_translations_needs_login">Для просмотра нужно войти</string>
+    <string name="feature_series_translations_needs_subscription">Для просмотра нужна подписка</string>
+    <string name="feature_series_translations_no_team">Авторы не указаны</string>
+    <string name="feature_series_translations_remembered">Смотрели этим переводом</string>
+    <string name="feature_series_translations_height">%1$dp</string>
+
+    <string name="feature_series_kind_voice_ru">Русская озвучка</string>
+    <string name="feature_series_kind_sub_ru">Русские субтитры</string>
+    <string name="feature_series_kind_voice_uk">Украинская озвучка</string>
+    <string name="feature_series_kind_voice_en">Английская озвучка</string>
+    <string name="feature_series_kind_sub_en">Английские субтитры</string>
+    <string name="feature_series_kind_sub_ja">Японские субтитры</string>
+    <string name="feature_series_kind_voice_other">Другая озвучка</string>
+    <string name="feature_series_kind_raw">RAW</string>
+    <string name="feature_series_kind_other">Другое</string>
 </resources>
