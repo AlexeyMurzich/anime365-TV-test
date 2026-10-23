@@ -4,7 +4,8 @@
 аниме, просмотр эпизодов, локальная Библиотека, скачивание и публикация
 переводов. Для просмотра видео нужен аккаунт с подпиской на сайте.
 
-Статус: веха M0 — скелет проекта ([docs/roadmap.md](docs/roadmap.md)).
+Статус: веха M1 — Главная, Каталог и экран Аниме на живом API
+([docs/roadmap.md](docs/roadmap.md)).
 
 ## Сборка
 
@@ -17,10 +18,18 @@
 Проверки, которые гоняет CI:
 
 ```bash
-./gradlew spotlessCheck detekt lint test buildHealth assembleDevDebug
+./gradlew spotlessCheck detekt lint test buildHealth assembleDevDebug -Proborazzi.test.verify=true
 ```
 
 `spotlessApply` правит форматирование автоматически.
+
+Скриншот-тесты экранов (Roborazzi) сверяются с эталонами в
+`feature/*/src/test/screenshots`. Экран изменился намеренно — перезаписать
+эталоны и посмотреть разницу в коммите:
+
+```bash
+./gradlew recordRoborazziDebug
+```
 
 Флейворы: `dev` (`io.github.arenoros.anime365.dev`, ставится рядом с
 релизной) и `prod`.
@@ -35,15 +44,20 @@
 
 ## Тесты против живого API
 
-Появятся вместе с сетевым слоем (M1). Для них нужен свой API-клиент на сайте и
-токен в `secrets.properties` в корне (файл в `.gitignore`):
+Ловят изменения API, которых не видят записанные ответы сервера. CI их не
+запускает:
+
+```bash
+./gradlew :core:network:testDebugUnitTest -PliveApi
+```
+
+Каталогу Токен не нужен. С M2 (Видеопоток) понадобится свой API-клиент на
+сайте и Токен в `secrets.properties` в корне (файл в `.gitignore`):
 
 ```properties
 ANIME365_APP=<id API-клиента>
 ANIME365_ACCESS_TOKEN=<токен>
 ```
-
-Без этого файла такие тесты пропускаются; CI их не запускает.
 
 ## Лицензия
 

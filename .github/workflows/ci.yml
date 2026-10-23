@@ -28,8 +28,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       # Тесты против живого API здесь не запускаются: Токена в CI нет и не будет (ADR 0005).
+      # Скриншоты Roborazzi сверяются с эталонами в src/test/screenshots.
       - name: Check
-        run: ./gradlew spotlessCheck detekt lint test buildHealth assembleDevDebug --continue
+        run: ./gradlew spotlessCheck detekt lint test buildHealth assembleDevDebug -Proborazzi.test.verify=true --continue
 
       - name: Upload reports
         if: failure()
@@ -39,3 +40,4 @@ jobs:
           path: |
             **/build/reports/
             **/build/test-results/
+            **/build/outputs/roborazzi/

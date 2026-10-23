@@ -16,6 +16,13 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             extensions.configure<LibraryExtension> {
                 configureAndroid(this)
                 namespace = defaultNamespace
+                // Robolectric на SDK 36 рефлексией лезет во внутренности FileDescriptor через SharedSecrets.
+                testOptions.unitTests.all {
+                    it.jvmArgs(
+                        "--add-opens=java.base/java.io=ALL-UNNAMED",
+                        "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+                    )
+                }
             }
             extensions.configure<LibraryAndroidComponentsExtension> {
                 // Unit-тесты библиотек гоняем только на debug: release ничего не добавляет, а время удваивает.

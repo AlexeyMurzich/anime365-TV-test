@@ -7,6 +7,7 @@ plugins {
 dependencies {
     api(libs.androidx.compose.material3)
     implementation(libs.androidx.annotation)
+    implementation(libs.coil.compose)
 
     testImplementation(libs.junit)
 }

@@ -4,8 +4,17 @@
     (Библиотека только на устройстве). Файл Токена доступа обязан быть исключён, как только
     появится (M2): его ключ шифрования в Keystore в копию не попадает, и восстановленный
     файл не расшифровать.
+    cache.db — кэш данных сайта: он восстанавливается с сервера и в копии только занимает место.
 -->
 <data-extraction-rules>
-    <cloud-backup />
-    <device-transfer />
+    <cloud-backup>
+        <exclude domain="database" path="cache.db" />
+        <exclude domain="database" path="cache.db-shm" />
+        <exclude domain="database" path="cache.db-wal" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="database" path="cache.db" />
+        <exclude domain="database" path="cache.db-shm" />
+        <exclude domain="database" path="cache.db-wal" />
+    </device-transfer>
 </data-extraction-rules>

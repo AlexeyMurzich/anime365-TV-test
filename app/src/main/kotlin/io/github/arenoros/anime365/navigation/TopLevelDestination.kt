@@ -18,7 +18,7 @@ internal enum class TopLevelDestination(
     @DrawableRes val unselectedIcon: Int,
 ) {
     Home(HomeKey, R.string.tab_home, KadrIcons.Home, KadrIcons.HomeOutlined),
-    Catalog(CatalogKey, R.string.tab_catalog, KadrIcons.ViewList, KadrIcons.ViewList),
+    Catalog(CatalogKey.Root, R.string.tab_catalog, KadrIcons.ViewList, KadrIcons.ViewList),
     Library(LibraryKey, R.string.tab_library, KadrIcons.Bookmark, KadrIcons.BookmarkBorder),
     Profile(ProfileKey, R.string.tab_profile, KadrIcons.Person, KadrIcons.PersonOutline),
 }

@@ -14,4 +14,13 @@ object KadrIcons {
     val BookmarkBorder = R.drawable.ic_bookmark_border
     val Person = R.drawable.ic_person
     val PersonOutline = R.drawable.ic_person_outline
+    val Search = R.drawable.ic_search
+    val Star = R.drawable.ic_star
+    val StarBorder = R.drawable.ic_star_border
+    val ArrowBack = R.drawable.ic_arrow_back
+    val Close = R.drawable.ic_close
+    val MoreVert = R.drawable.ic_more_vert
+    val PlayCircleOutline = R.drawable.ic_play_circle_outline
+    val ExpandMore = R.drawable.ic_expand_more
+    val Check = R.drawable.ic_check
 }

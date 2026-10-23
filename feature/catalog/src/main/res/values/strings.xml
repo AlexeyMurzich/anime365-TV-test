@@ -1,5 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="feature_catalog_home_title">Главная</string>
+    <string name="feature_catalog_home_title" translatable="false">anime365</string>
     <string name="feature_catalog_catalog_title">Каталог</string>
+    <string name="feature_catalog_search_placeholder">Поиск аниме</string>
+
+    <string name="feature_catalog_new_episodes">Новые серии</string>
+    <string name="feature_catalog_ongoing">Онгоинги</string>
+    <string name="feature_catalog_season_top">Рейтинг сезона</string>
+    <string name="feature_catalog_today">Сегодня</string>
+    <string name="feature_catalog_yesterday">Вчера</string>
+
+    <string name="feature_catalog_episodes_count">%1$d эп.</string>
+    <string name="feature_catalog_nothing_found">Ничего не найдено</string>
+    <string name="feature_catalog_reset_filters">Сбросить фильтры</string>
+    <string name="feature_catalog_reset">Сбросить</string>
+
+    <string name="feature_catalog_filter_type">Тип</string>
+    <string name="feature_catalog_filter_year">Год</string>
+    <string name="feature_catalog_filter_season">Сезон</string>
+    <string name="feature_catalog_filter_genres">Жанры</string>
+    <string name="feature_catalog_filter_genres_selected">Жанры: %1$d</string>
+    <string name="feature_catalog_filter_ongoing_only">Только онгоинги</string>
+    <string name="feature_catalog_filter_any">Любой</string>
+    <string name="feature_catalog_genres_all">Все выбранные</string>
+    <string name="feature_catalog_genres_any">Любой из</string>
+
+    <string name="feature_catalog_type_tv">ТВ</string>
+    <string name="feature_catalog_type_movie">Фильм</string>
+    <string name="feature_catalog_type_ova" translatable="false">OVA</string>
+    <string name="feature_catalog_type_ona" translatable="false">ONA</string>
+    <string name="feature_catalog_type_special">Спешл</string>
+    <string name="feature_catalog_type_music">Клип</string>
+
+    <string name="feature_catalog_season_winter">Зима</string>
+    <string name="feature_catalog_season_spring">Весна</string>
+    <string name="feature_catalog_season_summer">Лето</string>
+    <string name="feature_catalog_season_autumn">Осень</string>
 </resources>

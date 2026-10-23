@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_designsystem_back">Назад</string>
+    <string name="core_designsystem_clear">Очистить</string>
+    <string name="core_designsystem_retry">Повторить</string>
+    <string name="core_designsystem_all">Все</string>
+    <string name="core_designsystem_status_ongoing">Онгоинг</string>
+    <string name="core_designsystem_status_released">Вышел</string>
+    <string name="core_designsystem_status_announced">Анонс</string>
+    <string name="core_designsystem_score_out_of_ten">из 10</string>
+    <string name="core_designsystem_no_score">Нет оценки</string>
+    <string name="core_designsystem_score_description">Рейтинг %1$s</string>
+    <string name="core_designsystem_place_description">%1$d место</string>
+    <string name="core_designsystem_error_offline">Нет подключения к интернету</string>
+    <string name="core_designsystem_error_generic">Не удалось загрузить данные</string>
+    <string name="core_designsystem_stale_offline">Нет сети — показаны сохранённые данные</string>
+    <string name="core_designsystem_stale_generic">Не удалось обновить — показаны сохранённые данные</string>
+</resources>

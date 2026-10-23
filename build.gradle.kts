@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.hilt) apply false
+    alias(libs.plugins.room) apply false
+    alias(libs.plugins.roborazzi) apply false
     alias(libs.plugins.detekt) apply false
     alias(libs.plugins.spotless)
     alias(libs.plugins.dependency.analysis)
@@ -26,6 +28,16 @@ spotless {
 }
 
 dependencyAnalysis {
+    abi {
+        exclusions {
+            // Фабрики Hilt и реализации Room публичны в байт-коде, но API модуля не являются.
+            ignoreGeneratedCode()
+            // Модули Hilt и ViewModel — точки входа графа Hilt, а не API для соседних модулей.
+            excludeAnnotations("dagger\\.Module", "dagger\\.hilt\\.android\\.lifecycle\\.HiltViewModel")
+            // Реализации базы и DAO, сгенерированные Room.
+            excludeClasses(".*_Impl.*")
+        }
+    }
     structure {
         // Фичи получают Compose через :core:designsystem (api material3): это одна зависимость, а не десяток.
         bundle("compose") {
@@ -39,9 +51,32 @@ dependencyAnalysis {
         // Классы, на которые ссылается код, сгенерированный Hilt.
         bundle("hilt") {
             includeGroup("com.google.dagger")
+            includeDependency("javax.inject:javax.inject")
             includeDependency("androidx.fragment:fragment")
-            includeDependency("androidx.lifecycle:lifecycle-viewmodel")
-            includeDependency("androidx.lifecycle:lifecycle-viewmodel-savedstate")
+        }
+        // hiltViewModel() инлайнится в вызовы lifecycle-viewmodel-compose.
+        bundle("lifecycle") {
+            includeGroup("androidx.lifecycle")
+            includeGroup("androidx.hilt")
+        }
+        // Код, сгенерированный Room, ссылается на room-common, sqlite и collection.
+        bundle("room") {
+            includeGroup("androidx.room")
+            includeGroup("androidx.sqlite")
+            includeDependency("androidx.collection:collection")
+        }
+        bundle("paging") {
+            includeGroup("androidx.paging")
+        }
+        bundle("coil") {
+            includeGroup("io.coil-kt.coil3")
+        }
+        bundle("roborazzi") {
+            includeGroup("io.github.takahirom.roborazzi")
+            includeGroup("com.dropbox.differ")
+        }
+        bundle("robolectric") {
+            includeGroup("org.robolectric")
         }
         bundle("activity") {
             includeGroup("androidx.activity")
