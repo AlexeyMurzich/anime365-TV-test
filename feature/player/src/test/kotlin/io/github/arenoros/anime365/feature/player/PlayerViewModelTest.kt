@@ -175,6 +175,18 @@ class PlayerViewModelTest {
         }
 
     @Test
+    fun movingToNextEpisodeMarksCurrentWatched() =
+        runTest(mainDispatcherRule.dispatcher) {
+            translations.translations.value = mapOf(first.id to listOf(anilibria), second.id to listOf(anilibriaNext))
+            val viewModel = viewModel()
+
+            // Эндинг не досмотрен: до порога далеко, но «Следующая серия» — явный знак, что эту закончили.
+            viewModel.playNext()
+
+            assertEquals(true, library.progress.value[first.id]?.watched)
+        }
+
+    @Test
     fun qualityPrefersHighestNotAboveTarget() {
         assertEquals(1080, pickQuality(listOf(2160, 1080, 720), metered = false))
         assertEquals(720, pickQuality(listOf(1080, 720, 360), metered = true))

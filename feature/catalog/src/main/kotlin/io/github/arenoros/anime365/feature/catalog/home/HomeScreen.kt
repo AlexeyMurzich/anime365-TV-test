@@ -39,7 +39,7 @@ import io.github.arenoros.anime365.core.designsystem.component.errorMessage
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
 import io.github.arenoros.anime365.core.model.ContinueWatching
-import io.github.arenoros.anime365.core.model.NewEpisode
+import io.github.arenoros.anime365.core.model.FeedEpisode
 import io.github.arenoros.anime365.core.model.SeriesSummary
 import io.github.arenoros.anime365.feature.catalog.R
 import io.github.arenoros.anime365.feature.catalog.SeriesPosterCard
@@ -138,7 +138,7 @@ private fun HomeContent(
     today: LocalDate,
     actions: HomeActions,
 ) {
-    val days = remember(state.newEpisodes, zone) { state.newEpisodes.groupByDay(zone) }
+    val days = remember(state.feed, zone) { state.feed.groupByDay(zone) }
     LazyColumn(contentPadding = PaddingValues(bottom = KadrSpacing.Space6)) {
         item(key = "search") {
             KadrSearchButton(
@@ -149,7 +149,7 @@ private fun HomeContent(
         }
         if (state.error != null) item(key = "stale") { StaleDataBanner(state.error) }
         continueWatching(state.continueWatching, actions.onPlay)
-        newEpisodes(days, state.isRefreshing, today, zone, actions.onOpenEpisode)
+        feed(days, state.watching, state.isRefreshing, today, zone, actions.onOpenEpisode)
         ongoing(state.ongoing, state.isRefreshing, actions.onOpenSeries, actions.onShowAllOngoing)
         seasonTop(state.seasonTop, state.isRefreshing, actions.onOpenSeries)
     }
@@ -184,8 +184,10 @@ private fun LazyListScope.continueWatching(
     }
 }
 
-private fun LazyListScope.newEpisodes(
-    days: List<NewEpisodeDay>,
+@Suppress("LongParameterList")
+private fun LazyListScope.feed(
+    days: List<FeedDay>,
+    watching: Set<Int>,
     isRefreshing: Boolean,
     today: LocalDate,
     zone: ZoneId,
@@ -200,14 +202,15 @@ private fun LazyListScope.newEpisodes(
     days.forEach { day ->
         item(key = "day-${day.date}") { DayHeader(day.date, today) }
         items(day.episodes, key = { "episode-${it.episodeId}" }) { episode ->
-            NewEpisodeRow(episode, zone, onOpenEpisode)
+            FeedEpisodeRow(episode, episode.seriesId in watching, zone, onOpenEpisode)
         }
     }
 }
 
 @Composable
-private fun NewEpisodeRow(
-    episode: NewEpisode,
+private fun FeedEpisodeRow(
+    episode: FeedEpisode,
+    watching: Boolean,
     zone: ZoneId,
     onOpenEpisode: (seriesId: Int, episodeId: Int) -> Unit,
 ) {
@@ -217,6 +220,7 @@ private fun NewEpisodeRow(
         title = episode.seriesTitle,
         time = TIME_FORMAT.format(episode.releasedAt.atZone(zone)),
         onClick = { onOpenEpisode(episode.seriesId, episode.episodeId) },
+        markLabel = if (watching) stringResource(R.string.feature_catalog_watching) else null,
     )
 }
 

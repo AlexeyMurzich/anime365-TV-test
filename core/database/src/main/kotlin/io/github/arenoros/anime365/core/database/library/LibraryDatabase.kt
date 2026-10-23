@@ -1,5 +1,6 @@
 package io.github.arenoros.anime365.core.database.library
 
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
 
@@ -7,7 +8,11 @@ import androidx.room.RoomDatabase
  * Библиотека и Прогресс (ADR 0001): существуют только на устройстве и входят в резервную копию
  * Android. Не кэш — смена схемы только через миграцию, пересоздавать её нельзя.
  */
-@Database(entities = [LibrarySeriesEntity::class, EpisodeProgressEntity::class], version = 1)
+@Database(
+    entities = [LibrarySeriesEntity::class, EpisodeProgressEntity::class, NewEpisodeEntity::class],
+    version = 2,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
+)
 abstract class LibraryDatabase : RoomDatabase() {
     abstract fun libraryDao(): LibraryDao
 

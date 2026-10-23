@@ -11,13 +11,15 @@ import io.github.arenoros.anime365.core.data.repository.SeriesRepository
 import io.github.arenoros.anime365.core.model.Episode
 import io.github.arenoros.anime365.core.model.EpisodeProgress
 import io.github.arenoros.anime365.core.model.LastWatched
+import io.github.arenoros.anime365.core.model.LibraryStatus
 import io.github.arenoros.anime365.core.model.Series
-import io.github.arenoros.anime365.core.model.episodeAfter
-import io.github.arenoros.anime365.core.model.firstEpisode
+import io.github.arenoros.anime365.core.model.WatchAction
+import io.github.arenoros.anime365.core.model.watchAction
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -29,36 +31,20 @@ internal data class SeriesUiState(
     /** Прогресс по `id` Эпизода. */
     val progress: Map<Int, EpisodeProgress> = emptyMap(),
     val lastWatched: LastWatched? = null,
+    /** `null` — аниме не в Списке. */
+    val status: LibraryStatus? = null,
+    /** Новые Эпизоды на момент открытия страницы. */
+    val newEpisodes: Set<Int> = emptySet(),
 ) {
-    /** Главная кнопка экрана: недосмотренное — сразу в Плеер, иначе — следующий или первый Эпизод. */
-    val watchAction: WatchAction?
-        get() {
-            val last = lastWatched
-            val details = series?.details
-            return when {
-                last != null && !last.progress.watched -> WatchAction.Resume(last)
-                last != null -> details?.episodeAfter(last.episodeId)?.let(WatchAction::Next)
-                else -> details?.firstEpisode?.let(WatchAction::Start)
-            }
-        }
+    val watchAction: WatchAction? get() = watchAction(series?.details, lastWatched)
 }
 
-internal sealed interface WatchAction {
-    /** «ПРОДОЛЖИТЬ · 7 серия» — Плеер с тем же Переводом. */
-    data class Resume(
-        val lastWatched: LastWatched,
-    ) : WatchAction
-
-    /** «ПРОДОЛЖИТЬ · 8 серия» — прошлый досмотрен, Выбор Перевода для следующего. */
-    data class Next(
-        val episode: Episode,
-    ) : WatchAction
-
-    /** «НАЧАТЬ ПРОСМОТР» — Выбор Перевода для первого Эпизода. */
-    data class Start(
-        val episode: Episode,
-    ) : WatchAction
-}
+private data class SeriesLibrary(
+    val progress: Map<Int, EpisodeProgress>,
+    val lastWatched: LastWatched?,
+    val status: LibraryStatus?,
+    val newEpisodes: Set<Int>,
+)
 
 @HiltViewModel(assistedFactory = SeriesViewModel.Factory::class)
 internal class SeriesViewModel
@@ -66,31 +52,75 @@ internal class SeriesViewModel
     constructor(
         @Assisted private val seriesId: Int,
         private val repository: SeriesRepository,
-        library: LibraryRepository,
+        private val library: LibraryRepository,
     ) : ViewModel() {
         private val refreshing = MutableStateFlow(true)
         private val error = MutableStateFlow<Throwable?>(null)
+        private val newAtOpen = MutableStateFlow(emptySet<Int>())
 
         val uiState: StateFlow<SeriesUiState> =
             combine(
                 repository.series(seriesId),
                 refreshing,
                 error,
-                library.progress(seriesId),
-                library.lastWatched(seriesId),
-                ::SeriesUiState,
-            ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SeriesUiState())
+                combine(
+                    library.progress(seriesId),
+                    library.lastWatched(seriesId),
+                    library.status(seriesId),
+                    newAtOpen,
+                    ::SeriesLibrary,
+                ),
+            ) { series, refreshing, error, library ->
+                SeriesUiState(
+                    series,
+                    refreshing,
+                    error,
+                    library.progress,
+                    library.lastWatched,
+                    library.status,
+                    library.newEpisodes,
+                )
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SeriesUiState())
 
         init {
-            refresh(force = false)
+            viewModelScope.launch {
+                // Отметки Новых Эпизодов на сетке — какими они были до открытия: открытие их сбрасывает.
+                newAtOpen.value = library.newEpisodeIds(seriesId)
+                load(force = false)
+            }
         }
 
         fun refresh(force: Boolean = true) {
-            viewModelScope.launch {
-                refreshing.value = true
-                error.value = repository.refresh(seriesId, force).exceptionOrNull()
-                refreshing.value = false
-            }
+            viewModelScope.launch { load(force) }
+        }
+
+        /**
+         * Всё, что видно на странице после загрузки, — уже не новое. Только здесь, а не на каждое
+         * обновление кэша: иначе фоновая проверка, обновив открытое аниме, сама бы гасила свои находки.
+         */
+        private suspend fun load(force: Boolean) {
+            refreshing.value = true
+            error.value = repository.refresh(seriesId, force).exceptionOrNull()
+            refreshing.value = false
+            repository
+                .series(seriesId)
+                .first()
+                ?.takeIf { it.details != null }
+                ?.let { library.markSeen(it) }
+        }
+
+        fun setWatched(
+            episode: Episode,
+            watched: Boolean,
+        ) {
+            val series = uiState.value.series ?: return
+            viewModelScope.launch { library.setWatched(series.summary, episode, watched) }
+        }
+
+        /** `null` — убрать из Списка. */
+        fun setStatus(status: LibraryStatus?) {
+            val series = uiState.value.series ?: return
+            viewModelScope.launch { library.setStatus(series, status) }
         }
 
         @AssistedFactory

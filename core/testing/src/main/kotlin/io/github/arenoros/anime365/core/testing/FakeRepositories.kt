@@ -1,15 +1,23 @@
 package io.github.arenoros.anime365.core.testing
 
+import android.net.Uri
 import io.github.arenoros.anime365.core.data.repository.AccountRepository
+import io.github.arenoros.anime365.core.data.repository.ImportMode
+import io.github.arenoros.anime365.core.data.repository.LibraryFileSummary
 import io.github.arenoros.anime365.core.data.repository.LibraryRepository
+import io.github.arenoros.anime365.core.data.repository.LibraryTransfer
 import io.github.arenoros.anime365.core.data.repository.Playback
 import io.github.arenoros.anime365.core.data.repository.SeriesRepository
 import io.github.arenoros.anime365.core.data.repository.TranslationRepository
 import io.github.arenoros.anime365.core.model.Account
 import io.github.arenoros.anime365.core.model.ContinueWatching
+import io.github.arenoros.anime365.core.model.Episode
 import io.github.arenoros.anime365.core.model.EpisodeProgress
 import io.github.arenoros.anime365.core.model.LastWatched
+import io.github.arenoros.anime365.core.model.LibraryEntry
+import io.github.arenoros.anime365.core.model.LibraryStatus
 import io.github.arenoros.anime365.core.model.Series
+import io.github.arenoros.anime365.core.model.SeriesSummary
 import io.github.arenoros.anime365.core.model.Translation
 import io.github.arenoros.anime365.core.model.TranslationChoice
 import io.github.arenoros.anime365.core.model.VideoStream
@@ -56,12 +64,51 @@ class FakeTranslationRepository : TranslationRepository {
     }
 }
 
+@Suppress("TooManyFunctions")
 class FakeLibraryRepository : LibraryRepository {
     val progress = MutableStateFlow<Map<Int, EpisodeProgress>>(emptyMap())
     val lastWatched = MutableStateFlow<LastWatched?>(null)
     val continueWatching = MutableStateFlow<List<ContinueWatching>>(emptyList())
     var choice: TranslationChoice? = null
     val saved = mutableListOf<Playback>()
+    val entries = MutableStateFlow<List<LibraryEntry>>(emptyList())
+    val status = MutableStateFlow<LibraryStatus?>(null)
+    val newEpisodeCount = MutableStateFlow(0)
+    override val hintShown = MutableStateFlow(false)
+    var newEpisodeIds: Set<Int> = emptySet()
+    val seen = mutableListOf<Series>()
+
+    override fun entries(): Flow<List<LibraryEntry>> = entries
+
+    override fun status(seriesId: Int): Flow<LibraryStatus?> = status
+
+    override fun newEpisodeCount(): Flow<Int> = newEpisodeCount
+
+    override suspend fun setHintShown() {
+        hintShown.value = true
+    }
+
+    override suspend fun setStatus(
+        series: Series,
+        status: LibraryStatus?,
+    ) {
+        this.status.value = status
+    }
+
+    override suspend fun newEpisodeIds(seriesId: Int): Set<Int> = newEpisodeIds
+
+    override suspend fun markSeen(series: Series) {
+        seen += series
+        newEpisodeIds = emptySet()
+    }
+
+    override suspend fun watching(): List<Int> =
+        entries.value
+            .filter {
+                it.status == LibraryStatus.Watching
+            }.map { it.seriesId }
+
+    override suspend fun recordNewEpisodes(series: Series): List<Episode> = emptyList()
 
     override fun progress(seriesId: Int): Flow<Map<Int, EpisodeProgress>> = progress
 
@@ -75,6 +122,15 @@ class FakeLibraryRepository : LibraryRepository {
 
     override suspend fun save(playback: Playback) {
         saved += playback
+    }
+
+    override suspend fun setWatched(
+        series: SeriesSummary,
+        episode: Episode,
+        watched: Boolean,
+    ) {
+        val old = progress.value[episode.id] ?: EpisodeProgress(episode.id, 0, 0, watched)
+        progress.value += episode.id to old.copy(watched = watched)
     }
 }
 
@@ -96,5 +152,22 @@ class FakeAccountRepository : AccountRepository {
 
     override suspend fun logOut() {
         account.value = Account.Guest
+    }
+}
+
+/** Экспорт и импорт без файлов: результат задаёт тест, импорты записываются. */
+class FakeLibraryTransfer : LibraryTransfer {
+    var exportResult: Result<LibraryFileSummary> = Result.success(LibraryFileSummary(0, 0))
+    var importResult: Result<LibraryFileSummary> = Result.success(LibraryFileSummary(0, 0))
+    val imports = mutableListOf<Pair<Uri, ImportMode>>()
+
+    override suspend fun export(uri: Uri): Result<LibraryFileSummary> = exportResult
+
+    override suspend fun import(
+        uri: Uri,
+        mode: ImportMode,
+    ): Result<LibraryFileSummary> {
+        imports += uri to mode
+        return importResult
     }
 }

@@ -56,6 +56,6 @@ class AccountScreenshotTest {
         account: Account,
         fontScale: Float = 1f,
     ) = compose.captureScreen(name, fontScale) {
-        ProfileScreen(account, now, onLogin = {}, onLogOut = {}, zone = moscow)
+        ProfileScreen(account, now, onLogin = {}, onLogOut = {}, onExport = {}, onImport = {}, zone = moscow)
     }
 }

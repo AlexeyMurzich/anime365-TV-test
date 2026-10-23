@@ -13,6 +13,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.github.arenoros.anime365.core.datastore.AccountStore
 import io.github.arenoros.anime365.core.datastore.DataStoreAccountStore
+import io.github.arenoros.anime365.core.datastore.DataStoreSettingsStore
+import io.github.arenoros.anime365.core.datastore.SettingsStore
 import javax.inject.Singleton
 
 @Module
@@ -20,6 +22,9 @@ import javax.inject.Singleton
 internal abstract class DataStoreModule {
     @Binds
     abstract fun accountStore(store: DataStoreAccountStore): AccountStore
+
+    @Binds
+    abstract fun settingsStore(store: DataStoreSettingsStore): SettingsStore
 
     companion object {
         /** Имя файла — в правилах резервного копирования :app (data_extraction_rules.xml). */

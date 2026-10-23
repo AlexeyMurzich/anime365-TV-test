@@ -1,6 +1,11 @@
 package io.github.arenoros.anime365.feature.series
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +54,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -68,10 +74,13 @@ import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
+import io.github.arenoros.anime365.core.model.Episode
+import io.github.arenoros.anime365.core.model.LibraryStatus
 import io.github.arenoros.anime365.core.model.ReleaseStatus
 import io.github.arenoros.anime365.core.model.Series
 import io.github.arenoros.anime365.core.model.SeriesDetails
 import io.github.arenoros.anime365.core.model.SeriesSummary
+import io.github.arenoros.anime365.core.model.WatchAction
 import io.github.arenoros.anime365.core.ui.EpisodeGrid
 
 private val POSTER_WIDTH = 120.dp
@@ -89,14 +98,34 @@ internal fun SeriesRoute(
         hiltViewModel<SeriesViewModel, SeriesViewModel.Factory>(creationCallback = { it.create(seriesId) }),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val requestNotifications = rememberNotificationPermissionRequest()
     SeriesScreen(
         state = state,
         onRetry = viewModel::refresh,
         onOpenGenre = onOpenGenre,
         onOpenEpisode = onOpenEpisode,
         onPlay = onPlay,
+        onSetStatus = { status ->
+            if (status == LibraryStatus.Watching) requestNotifications()
+            viewModel.setStatus(status)
+        },
+        onSetWatched = viewModel::setWatched,
         onBack = onBack,
     )
+}
+
+/** Уведомления о Новых Эпизодах — только по аниме «Смотрю»: разрешение спрашиваем, когда такое появляется. */
+@Composable
+private fun rememberNotificationPermissionRequest(): () -> Unit {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return {}
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    return {
+        val permission = Manifest.permission.POST_NOTIFICATIONS
+        if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+            launcher.launch(permission)
+        }
+    }
 }
 
 @Composable
@@ -106,6 +135,8 @@ internal fun SeriesScreen(
     onOpenGenre: (Int) -> Unit,
     onOpenEpisode: (episodeId: Int) -> Unit,
     onPlay: (episodeId: Int, translationId: Int) -> Unit,
+    onSetStatus: (LibraryStatus?) -> Unit,
+    onSetWatched: (Episode, Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -136,7 +167,16 @@ internal fun SeriesScreen(
                 }
 
                 else -> {
-                    SeriesContent(series, state, onRetry, onOpenGenre, onOpenEpisode, onPlay)
+                    SeriesContent(
+                        series,
+                        state,
+                        onRetry,
+                        onOpenGenre,
+                        onOpenEpisode,
+                        onPlay,
+                        onSetStatus,
+                        onSetWatched,
+                    )
                 }
             }
         }
@@ -151,35 +191,40 @@ private fun SeriesContent(
     onOpenGenre: (Int) -> Unit,
     onOpenEpisode: (episodeId: Int) -> Unit,
     onPlay: (episodeId: Int, translationId: Int) -> Unit,
+    onSetStatus: (LibraryStatus?) -> Unit,
+    onSetWatched: (Episode, Boolean) -> Unit,
 ) {
     var tab by rememberSaveable { mutableStateOf(SeriesTab.Description) }
+    var editingStatus by rememberSaveable { mutableStateOf(false) }
+    var episodeActions by remember { mutableStateOf<Episode?>(null) }
+    episodeActions?.let { episode ->
+        EpisodeActionsSheet(
+            episode = episode,
+            watched = state.progress[episode.id]?.watched == true,
+            onSetWatched = { watched ->
+                onSetWatched(episode, watched)
+                episodeActions = null
+            },
+            onDismiss = { episodeActions = null },
+        )
+    }
     val details = series.details
+    if (editingStatus) {
+        StatusSheet(
+            status = state.status,
+            onSelect = {
+                onSetStatus(it)
+                editingStatus = false
+            },
+            onDismiss = { editingStatus = false },
+        )
+    }
     LazyColumn(contentPadding = PaddingValues(bottom = KadrSpacing.Space6)) {
         if (state.error != null && details != null) item { StaleDataBanner(state.error) }
         item { Header(series.summary, details) }
-        state.watchAction?.let { action -> item { WatchButton(action, onOpenEpisode, onPlay) } }
+        item { MainActions(state, onOpenEpisode, onPlay, onEditStatus = { editingStatus = true }) }
         if (details != null && details.genres.isNotEmpty()) item { Genres(details, onOpenGenre) }
-        item {
-            PrimaryTabRow(selectedTabIndex = tab.ordinal, containerColor = KadrTheme.palette.surface) {
-                SeriesTab.entries.forEach { entry ->
-                    Tab(
-                        selected = tab == entry,
-                        onClick = { tab = entry },
-                        text = {
-                            Text(
-                                stringResource(
-                                    if (entry == SeriesTab.Description) {
-                                        R.string.feature_series_tab_description
-                                    } else {
-                                        R.string.feature_series_tab_episodes
-                                    },
-                                ).uppercase(),
-                            )
-                        },
-                    )
-                }
-            }
-        }
+        item { Tabs(tab, onSelect = { tab = it }) }
         when {
             details == null && state.error != null -> {
                 item { ErrorState(errorMessage(state.error), onRetry = onRetry) }
@@ -202,6 +247,8 @@ private fun SeriesContent(
                         progress = state.progress,
                         onEpisodeClick = { onOpenEpisode(it.id) },
                         modifier = Modifier.padding(top = KadrSpacing.Space2),
+                        newEpisodes = state.newEpisodes,
+                        onEpisodeLongClick = { episodeActions = it },
                     )
                 }
             }
@@ -210,10 +257,55 @@ private fun SeriesContent(
 }
 
 @Composable
+private fun Tabs(
+    selected: SeriesTab,
+    onSelect: (SeriesTab) -> Unit,
+) {
+    PrimaryTabRow(selectedTabIndex = selected.ordinal, containerColor = KadrTheme.palette.surface) {
+        SeriesTab.entries.forEach { entry ->
+            val label =
+                if (entry ==
+                    SeriesTab.Description
+                ) {
+                    R.string.feature_series_tab_description
+                } else {
+                    R.string.feature_series_tab_episodes
+                }
+            Tab(
+                selected = selected == entry,
+                onClick = { onSelect(entry) },
+                text = { Text(stringResource(label).uppercase()) },
+            )
+        }
+    }
+}
+
+/** «НАЧАТЬ ПРОСМОТР» или «ПРОДОЛЖИТЬ» и «В СПИСОК» — друг под другом: рядом подпись первой не помещается. */
+@Composable
+private fun MainActions(
+    state: SeriesUiState,
+    onOpenEpisode: (episodeId: Int) -> Unit,
+    onPlay: (episodeId: Int, translationId: Int) -> Unit,
+    onEditStatus: () -> Unit,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(KadrTheme.palette.surface)
+            .padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space2),
+        verticalArrangement = Arrangement.spacedBy(KadrSpacing.Space2),
+    ) {
+        state.watchAction?.let { WatchButton(it, onOpenEpisode, onPlay, Modifier.fillMaxWidth()) }
+        LibraryButton(state.status, onClick = onEditStatus, Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
 private fun WatchButton(
     action: WatchAction,
     onOpenEpisode: (episodeId: Int) -> Unit,
     onPlay: (episodeId: Int, translationId: Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val label =
         when (action) {
@@ -240,11 +332,7 @@ private fun WatchButton(
                 is WatchAction.Start -> onOpenEpisode(action.episode.id)
             }
         },
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(KadrTheme.palette.surface)
-                .padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space2),
+        modifier = modifier,
     ) {
         Icon(painterResource(KadrIcons.PlayArrow), contentDescription = null)
         Text(

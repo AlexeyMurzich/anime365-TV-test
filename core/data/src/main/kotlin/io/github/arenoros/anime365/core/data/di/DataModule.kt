@@ -8,7 +8,9 @@ import dagger.hilt.components.SingletonComponent
 import io.github.arenoros.anime365.core.data.repository.AccountRepository
 import io.github.arenoros.anime365.core.data.repository.CatalogRepository
 import io.github.arenoros.anime365.core.data.repository.HomeRepository
+import io.github.arenoros.anime365.core.data.repository.JsonLibraryTransfer
 import io.github.arenoros.anime365.core.data.repository.LibraryRepository
+import io.github.arenoros.anime365.core.data.repository.LibraryTransfer
 import io.github.arenoros.anime365.core.data.repository.LocalLibraryRepository
 import io.github.arenoros.anime365.core.data.repository.OfflineFirstAccountRepository
 import io.github.arenoros.anime365.core.data.repository.OfflineFirstCatalogRepository
@@ -39,6 +41,9 @@ internal abstract class DataModule {
 
     @Binds
     abstract fun libraryRepository(repository: LocalLibraryRepository): LibraryRepository
+
+    @Binds
+    abstract fun libraryTransfer(transfer: JsonLibraryTransfer): LibraryTransfer
 
     companion object {
         @Provides

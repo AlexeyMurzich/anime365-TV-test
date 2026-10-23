@@ -6,4 +6,10 @@
     <string name="tab_catalog">Каталог</string>
     <string name="tab_library">Список</string>
     <string name="tab_profile">Профиль</string>
+    <plurals name="new_episodes_badge">
+        <item quantity="one">%d новая серия</item>
+        <item quantity="few">%d новые серии</item>
+        <item quantity="many">%d новых серий</item>
+        <item quantity="other">%d новой серии</item>
+    </plurals>
 </resources>

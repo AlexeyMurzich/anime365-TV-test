@@ -37,4 +37,5 @@
     <string name="feature_catalog_season_spring">Весна</string>
     <string name="feature_catalog_season_summer">Лето</string>
     <string name="feature_catalog_season_autumn">Осень</string>
+    <string name="feature_catalog_watching">Смотрю</string>
 </resources>

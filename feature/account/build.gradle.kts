@@ -7,6 +7,9 @@ plugins {
 dependencies {
     implementation(projects.core.data)
     implementation(projects.core.model)
+    // Выбор файла для Экспорта и Импорта Списка.
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.annotation)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

@@ -32,7 +32,8 @@ private const val PERCENT = 100
 /**
  * EpisodeGrid Kadr: трейлеры, спешлы и фильмы — широкими кнопками, нумерованные — сеткой, от
  * 100 Эпизодов — диапазонами. [progress] — Прогресс по `id` Эпизода. [currentEpisodeId] — что играет
- * сейчас: в Плеере сетка открывается на нём.
+ * сейчас: в Плеере сетка открывается на нём. [newEpisodes] — `id` Новых Эпизодов.
+ * [onEpisodeLongClick] — действия с Эпизодом (отметить просмотренным); `null` — их нет.
  */
 @Composable
 fun EpisodeGrid(
@@ -43,8 +44,12 @@ fun EpisodeGrid(
     onEpisodeClick: (Episode) -> Unit,
     modifier: Modifier = Modifier,
     currentEpisodeId: Int? = null,
+    newEpisodes: Set<Int> = emptySet(),
+    onEpisodeLongClick: ((Episode) -> Unit)? = null,
 ) {
     val grid = details.episodeGrid(episodeCount)
+    val marks = EpisodeMarks(progress, currentEpisodeId, newEpisodes)
+    val actionsLabel = stringResource(R.string.core_ui_episode_actions)
     if (grid.special.isEmpty() && grid.numbered.isEmpty()) {
         EmptyState(stringResource(R.string.core_ui_no_episodes), modifier)
         return
@@ -58,12 +63,14 @@ fun EpisodeGrid(
                     row.forEach { episode ->
                         EpisodeButton(
                             label = episode.label,
-                            description = description(episode.label, progress[episode.id]),
-                            state = state(episode, progress, currentEpisodeId),
+                            description = marks.description(episode),
+                            state = marks.state(episode),
                             onClick = { onEpisodeClick(episode) },
                             modifier = Modifier.weight(2f),
                             wide = true,
                             progress = progress[episode.id]?.fraction ?: 0f,
+                            onLongClick = onEpisodeLongClick?.let { { it(episode) } },
+                            onLongClickLabel = actionsLabel,
                         )
                     }
                     repeat(wideColumns - row.size) { Spacer(Modifier.weight(2f)) }
@@ -75,7 +82,7 @@ fun EpisodeGrid(
             cells.chunked(columns).forEach { row ->
                 GridRow {
                     row.forEach { cell ->
-                        NumberedEpisodeButton(cell, progress, currentEpisodeId, onEpisodeClick, Modifier.weight(1f))
+                        NumberedEpisodeButton(cell, marks, onEpisodeClick, onEpisodeLongClick, Modifier.weight(1f))
                     }
                     repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                 }
@@ -97,56 +104,69 @@ private fun EpisodeGrid.initialRange(
     }
 }
 
-private fun state(
-    episode: Episode,
-    progress: Map<Int, EpisodeProgress>,
-    currentEpisodeId: Int?,
-): EpisodeState {
-    val episodeProgress = progress[episode.id]
-    return when {
-        episode.id == currentEpisodeId -> EpisodeState.Current
-        episodeProgress?.watched == true -> EpisodeState.Watched
-        episodeProgress != null && episodeProgress.positionMs > 0 -> EpisodeState.Current
-        else -> EpisodeState.Released
+/** Что известно об Эпизодах помимо самой сетки: Прогресс, что играет, что вышло нового. */
+private class EpisodeMarks(
+    val progress: Map<Int, EpisodeProgress>,
+    val currentEpisodeId: Int?,
+    val newEpisodes: Set<Int>,
+) {
+    fun state(episode: Episode): EpisodeState {
+        val episodeProgress = progress[episode.id]
+        return when {
+            episode.id == currentEpisodeId -> EpisodeState.Current
+            episodeProgress?.watched == true -> EpisodeState.Watched
+            episodeProgress != null && episodeProgress.positionMs > 0 -> EpisodeState.Current
+            episode.id in newEpisodes -> EpisodeState.New
+            else -> EpisodeState.Released
+        }
+    }
+
+    @Composable
+    fun description(episode: Episode): String {
+        val episodeProgress = progress[episode.id]
+        return when (state(episode)) {
+            EpisodeState.Watched -> {
+                stringResource(R.string.core_ui_episode_watched, episode.label)
+            }
+
+            EpisodeState.Current if episodeProgress != null -> {
+                stringResource(
+                    R.string.core_ui_episode_current,
+                    episode.label,
+                    (episodeProgress.fraction * PERCENT).toInt(),
+                )
+            }
+
+            EpisodeState.New -> {
+                stringResource(R.string.core_ui_episode_new, episode.label)
+            }
+
+            else -> {
+                episode.label
+            }
+        }
     }
 }
 
 @Composable
-private fun description(
-    label: String,
-    progress: EpisodeProgress?,
-): String =
-    when {
-        progress?.watched == true -> {
-            stringResource(R.string.core_ui_episode_watched, label)
-        }
-
-        progress != null && progress.positionMs > 0 -> {
-            stringResource(R.string.core_ui_episode_current, label, (progress.fraction * PERCENT).toInt())
-        }
-
-        else -> {
-            label
-        }
-    }
-
-@Composable
 private fun NumberedEpisodeButton(
     cell: EpisodeCell,
-    progress: Map<Int, EpisodeProgress>,
-    currentEpisodeId: Int?,
+    marks: EpisodeMarks,
     onEpisodeClick: (Episode) -> Unit,
+    onEpisodeLongClick: ((Episode) -> Unit)?,
     modifier: Modifier,
 ) {
     when (cell) {
         is EpisodeCell.Released -> {
             EpisodeButton(
                 label = cell.number,
-                description = description(cell.episode.label, progress[cell.episode.id]),
-                state = state(cell.episode, progress, currentEpisodeId),
+                description = marks.description(cell.episode),
+                state = marks.state(cell.episode),
                 onClick = { onEpisodeClick(cell.episode) },
                 modifier = modifier,
-                progress = progress[cell.episode.id]?.fraction ?: 0f,
+                progress = marks.progress[cell.episode.id]?.fraction ?: 0f,
+                onLongClick = onEpisodeLongClick?.let { { it(cell.episode) } },
+                onLongClickLabel = stringResource(R.string.core_ui_episode_actions),
             )
         }
 

@@ -5,11 +5,11 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.arenoros.anime365.core.data.repository.HomeRepository
 import io.github.arenoros.anime365.core.data.repository.LibraryRepository
-import io.github.arenoros.anime365.core.data.repository.TranslationRepository
+import io.github.arenoros.anime365.core.data.repository.RememberedTranslation
 import io.github.arenoros.anime365.core.model.ContinueWatching
-import io.github.arenoros.anime365.core.model.NewEpisode
+import io.github.arenoros.anime365.core.model.FeedEpisode
+import io.github.arenoros.anime365.core.model.LibraryStatus
 import io.github.arenoros.anime365.core.model.SeriesSummary
-import io.github.arenoros.anime365.core.model.ofTeam
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 internal data class HomeUiState(
-    val newEpisodes: List<NewEpisode> = emptyList(),
+    val feed: List<FeedEpisode> = emptyList(),
     val ongoing: List<SeriesSummary> = emptyList(),
     val seasonTop: List<SeriesSummary> = emptyList(),
     val isRefreshing: Boolean = true,
@@ -30,9 +30,11 @@ internal data class HomeUiState(
     val error: Throwable? = null,
     /** Из Библиотеки на устройстве: виден и без сети. */
     val continueWatching: List<ContinueWatching> = emptyList(),
+    /** `id` аниме со Статусом «Смотрю»: их строки в «Новых сериях» выделены. */
+    val watching: Set<Int> = emptySet(),
 ) {
     val isEmpty: Boolean
-        get() = continueWatching.isEmpty() && newEpisodes.isEmpty() && ongoing.isEmpty() && seasonTop.isEmpty()
+        get() = continueWatching.isEmpty() && feed.isEmpty() && ongoing.isEmpty() && seasonTop.isEmpty()
 }
 
 /** Куда ведёт касание Новой серии (docs/screens.md, Главная). */
@@ -54,8 +56,8 @@ internal class HomeViewModel
     @Inject
     constructor(
         private val repository: HomeRepository,
-        private val library: LibraryRepository,
-        private val translations: TranslationRepository,
+        library: LibraryRepository,
+        private val rememberedTranslation: RememberedTranslation,
     ) : ViewModel() {
         private val eventChannel = Channel<HomeEvent>(Channel.BUFFERED)
         val events: Flow<HomeEvent> = eventChannel.receiveAsFlow()
@@ -65,13 +67,17 @@ internal class HomeViewModel
 
         val uiState: StateFlow<HomeUiState> =
             combine(
-                repository.newEpisodes,
+                repository.feed,
                 repository.ongoing,
                 repository.seasonTop,
                 combine(refreshing, error, ::Pair),
-                library.continueWatching(),
-            ) { newEpisodes, ongoing, seasonTop, (refreshing, error), continueWatching ->
-                HomeUiState(newEpisodes, ongoing, seasonTop, refreshing, error, continueWatching)
+                combine(library.continueWatching(), library.entries(), ::Pair),
+            ) { feed, ongoing, seasonTop, (refreshing, error), (continueWatching, entries) ->
+                val watching =
+                    entries.filter { it.status == LibraryStatus.Watching }.mapTo(
+                        mutableSetOf(),
+                    ) { it.seriesId }
+                HomeUiState(feed, ongoing, seasonTop, refreshing, error, continueWatching, watching)
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), HomeUiState())
 
         init {
@@ -84,8 +90,7 @@ internal class HomeViewModel
             episodeId: Int,
         ) {
             viewModelScope.launch {
-                val choice = library.choice(seriesId)
-                val match = choice?.let { translations.load(episodeId).getOrNull()?.ofTeam(it) }
+                val match = rememberedTranslation(seriesId, episodeId)
                 eventChannel.send(
                     if (match != null) {
                         HomeEvent.Play(seriesId, episodeId, match.id)

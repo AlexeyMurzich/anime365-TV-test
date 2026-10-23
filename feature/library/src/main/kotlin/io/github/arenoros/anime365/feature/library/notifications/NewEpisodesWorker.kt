@@ -1,0 +1,55 @@
+package io.github.arenoros.anime365.feature.library.notifications
+
+import android.content.Context
+import androidx.hilt.work.HiltWorker
+import androidx.work.Constraints
+import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
+import io.github.arenoros.anime365.core.data.repository.LibraryRepository
+import io.github.arenoros.anime365.core.data.repository.SeriesRepository
+import kotlinx.coroutines.flow.first
+import java.util.concurrent.TimeUnit
+
+/** Проверяет аниме со Статусом «Смотрю» и сообщает о Новых Эпизодах (docs/screens.md, «Уведомления»). */
+@HiltWorker
+internal class NewEpisodesWorker
+    @AssistedInject
+    constructor(
+        @Assisted context: Context,
+        @Assisted params: WorkerParameters,
+        private val library: LibraryRepository,
+        private val series: SeriesRepository,
+        private val notifier: NewEpisodesNotifier,
+    ) : CoroutineWorker(context, params) {
+        override suspend fun doWork(): Result {
+            library.watching().forEach { id ->
+                // Недоступная страница одного аниме не мешает проверить остальные.
+                if (series.refresh(id, force = true).isFailure) return@forEach
+                val loaded = series.series(id).first() ?: return@forEach
+                val fresh = library.recordNewEpisodes(loaded)
+                if (fresh.isNotEmpty()) notifier.notify(loaded.summary, fresh)
+            }
+            return Result.success()
+        }
+    }
+
+/** Расписание проверки Новых Эпизодов: раз в 6 часов, когда есть сеть (docs/roadmap.md, M3). */
+object NewEpisodesCheck {
+    private const val WORK_NAME = "new_episodes"
+    private const val PERIOD_HOURS = 6L
+
+    /** Вызывать при каждом запуске: уже стоящее расписание не сбрасывается. */
+    fun schedule(context: Context) {
+        val request =
+            PeriodicWorkRequestBuilder<NewEpisodesWorker>(PERIOD_HOURS, TimeUnit.HOURS)
+                .setConstraints(Constraints(requiredNetworkType = NetworkType.CONNECTED))
+                .build()
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
+    }
+}

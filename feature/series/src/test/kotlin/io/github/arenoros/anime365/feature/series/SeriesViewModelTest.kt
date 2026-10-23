@@ -4,10 +4,12 @@ import io.github.arenoros.anime365.core.data.repository.SeriesUnavailableExcepti
 import io.github.arenoros.anime365.core.model.Episode
 import io.github.arenoros.anime365.core.model.EpisodeProgress
 import io.github.arenoros.anime365.core.model.LastWatched
+import io.github.arenoros.anime365.core.model.LibraryStatus
 import io.github.arenoros.anime365.core.model.ReleaseStatus
 import io.github.arenoros.anime365.core.model.Series
 import io.github.arenoros.anime365.core.model.SeriesDetails
 import io.github.arenoros.anime365.core.model.SeriesSummary
+import io.github.arenoros.anime365.core.model.WatchAction
 import io.github.arenoros.anime365.core.testing.FakeLibraryRepository
 import io.github.arenoros.anime365.core.testing.FakeSeriesRepository
 import io.github.arenoros.anime365.core.testing.MainDispatcherRule
@@ -59,6 +61,62 @@ class SeriesViewModelTest {
             viewModel.refresh()
 
             assertEquals(listOf(7 to false, 7 to true), repository.refreshCalls)
+        }
+
+    @Test
+    fun openingMarksEpisodesSeenButKeepsNewMarksOnScreen() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val series = Series(summary(7), details)
+            repository.series.value = series
+            library.newEpisodeIds = setOf(second.id)
+            val viewModel = SeriesViewModel(7, repository, library)
+            backgroundScope.launch { viewModel.uiState.collect {} }
+
+            assertEquals(listOf(series), library.seen)
+            assertEquals(setOf(second.id), viewModel.uiState.value.newEpisodes)
+        }
+
+    @Test
+    fun backgroundCacheUpdateDoesNotMarkSeen() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val series = Series(summary(7), details)
+            repository.series.value = series
+            val viewModel = SeriesViewModel(7, repository, library)
+            backgroundScope.launch { viewModel.uiState.collect {} }
+
+            // Проверка Новых Эпизодов обновила аниме, пока его страница лежит в стеке.
+            val third = Episode(4, 3.0, "3 серия", "tv")
+            repository.series.value = series.copy(details = details.copy(episodes = details.episodes + third))
+
+            assertEquals(listOf(series), library.seen)
+        }
+
+    @Test
+    fun episodeIsMarkedWatchedByHand() =
+        runTest(mainDispatcherRule.dispatcher) {
+            repository.series.value = Series(summary(7), details)
+            val viewModel = SeriesViewModel(7, repository, library)
+            backgroundScope.launch { viewModel.uiState.collect {} }
+
+            viewModel.setWatched(first, watched = true)
+
+            assertEquals(
+                true,
+                viewModel.uiState.value.progress[first.id]
+                    ?.watched,
+            )
+        }
+
+    @Test
+    fun statusIsSetForLoadedSeries() =
+        runTest(mainDispatcherRule.dispatcher) {
+            repository.series.value = Series(summary(7), details)
+            val viewModel = SeriesViewModel(7, repository, library)
+            backgroundScope.launch { viewModel.uiState.collect {} }
+
+            viewModel.setStatus(LibraryStatus.Watching)
+
+            assertEquals(LibraryStatus.Watching, viewModel.uiState.value.status)
         }
 
     @Test

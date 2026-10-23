@@ -1,5 +1,6 @@
 package io.github.arenoros.anime365.feature.series
 
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -11,8 +12,11 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.model.Description
 import io.github.arenoros.anime365.core.model.Episode
+import io.github.arenoros.anime365.core.model.EpisodeProgress
 import io.github.arenoros.anime365.core.model.ExternalLink
 import io.github.arenoros.anime365.core.model.Genre
+import io.github.arenoros.anime365.core.model.LastWatched
+import io.github.arenoros.anime365.core.model.LibraryStatus
 import io.github.arenoros.anime365.core.model.ReleaseStatus
 import io.github.arenoros.anime365.core.model.Series
 import io.github.arenoros.anime365.core.model.SeriesDetails
@@ -87,6 +91,33 @@ class SeriesScreenScreenshotTest {
     }
 
     @Test
+    fun episodesOfWatchingSeriesWithNewOnes() {
+        val watching =
+            loaded.copy(
+                status = LibraryStatus.Watching,
+                progress = (101..108).associateWith { EpisodeProgress(it, 1000, 1000, watched = true) },
+                lastWatched = LastWatched(108, "8 серия", 1, EpisodeProgress(108, 1000, 1000, watched = true)),
+                newEpisodes = setOf(109, 110),
+            )
+        compose.setContent { TestScreen(watching) }
+        compose.onNodeWithText("СЕРИИ").performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("src/test/screenshots/series_episodes_new.png", ScreenshotOptions)
+    }
+
+    @Test
+    fun statusSheet() =
+        compose.captureScreen("series_status") {
+            Surface { StatusOptions(LibraryStatus.Watching, onSelect = {}) }
+        }
+
+    @Test
+    fun episodeActions() =
+        compose.captureScreen("series_episode_actions") {
+            Surface { EpisodeActions(Episode(105, 5.0, "5 серия", "tv"), watched = false, onSetWatched = {}) }
+        }
+
+    @Test
     fun summaryOnlyWhileLoading() = capture("series_loading", SeriesUiState(Series(summary, details = null)))
 
     @Test
@@ -101,10 +132,15 @@ class SeriesScreenScreenshotTest {
     @Composable
     private fun TestScreen(state: SeriesUiState) =
         KadrTheme {
-            SeriesScreen(state = state, onRetry = {}, onOpenGenre = {}, onOpenEpisode = {}, onPlay = {
-                _,
-                _,
-                ->
-            }, onBack = {})
+            SeriesScreen(
+                state = state,
+                onRetry = {},
+                onOpenGenre = {},
+                onOpenEpisode = {},
+                onPlay = { _, _ -> },
+                onSetStatus = {},
+                onSetWatched = { _, _ -> },
+                onBack = {},
+            )
         }
 }

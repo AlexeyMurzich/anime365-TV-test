@@ -1,25 +1,41 @@
 package io.github.arenoros.anime365
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
+import io.github.arenoros.anime365.feature.library.notifications.EpisodeLink
 import io.github.arenoros.anime365.ui.Anime365App
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    /** Касание уведомления о Новом Эпизоде, ещё не обработанное навигацией. */
+    private val link = MutableStateFlow<EpisodeLink?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Под статус-баром всегда зелёная шапка Kadr или чёрный Плеер: значки только светлые.
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
         super.onCreate(savedInstanceState)
+        // После пересоздания Activity переход уже в восстановленном стеке.
+        if (savedInstanceState == null) link.value = EpisodeLink.from(intent)
         setContent {
+            val pending by link.collectAsStateWithLifecycle()
             KadrTheme {
-                Anime365App()
+                Anime365App(link = pending, onLinkHandled = { link.value = null })
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        link.value = EpisodeLink.from(intent)
     }
 }

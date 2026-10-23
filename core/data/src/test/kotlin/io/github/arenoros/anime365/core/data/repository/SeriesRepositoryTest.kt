@@ -16,6 +16,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.Instant
 
 @RunWith(RobolectricTestRunner::class)
 class SeriesRepositoryTest {
@@ -42,7 +43,13 @@ class SeriesRepositoryTest {
                     episodes =
                         listOf(
                             EpisodeDto(id = 5, episodeFull = "Трейлер", episodeInt = 1.0, episodeType = "preview"),
-                            EpisodeDto(id = 3, episodeFull = "1 серия", episodeInt = 1.0, episodeType = "tv"),
+                            EpisodeDto(
+                                id = 3,
+                                episodeFull = "1 серия",
+                                episodeInt = 1.0,
+                                episodeType = "tv",
+                                firstUploadedDateTime = "2023-09-29 18:05:57",
+                            ),
                         ),
                 )
             }
@@ -52,6 +59,8 @@ class SeriesRepositoryTest {
 
             val details = repository.series(7).first()!!.details!!
             assertEquals(listOf("Трейлер", "1 серия"), details.episodes.map { it.label })
+            // Время сайта — московское.
+            assertEquals(listOf(null, Instant.parse("2023-09-29T15:05:57Z")), details.episodes.map { it.uploadedAt })
             assertEquals(listOf("Текст"), details.descriptions.map { it.text })
             assertEquals("tv", details.type)
         }

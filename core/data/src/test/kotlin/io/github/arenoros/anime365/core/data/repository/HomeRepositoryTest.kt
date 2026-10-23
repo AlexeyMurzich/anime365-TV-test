@@ -87,7 +87,7 @@ class HomeRepositoryTest {
 
             repository.refresh(force = false)
 
-            val episodes = repository.newEpisodes.first()
+            val episodes = repository.feed.first()
             assertEquals(listOf(11, 21), episodes.map { it.episodeId })
             assertEquals(listOf("Фрирен", "Не онгоинг"), episodes.map { it.seriesTitle })
             assertEquals(Instant.parse("2026-10-23T10:00:00Z"), episodes.first().releasedAt)

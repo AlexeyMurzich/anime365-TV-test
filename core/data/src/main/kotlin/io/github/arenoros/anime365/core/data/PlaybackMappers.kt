@@ -2,10 +2,13 @@ package io.github.arenoros.anime365.core.data
 
 import io.github.arenoros.anime365.core.database.library.EpisodeProgressEntity
 import io.github.arenoros.anime365.core.database.library.LastWatchedRow
+import io.github.arenoros.anime365.core.database.library.LibraryEntryRow
 import io.github.arenoros.anime365.core.database.model.TranslationEntity
 import io.github.arenoros.anime365.core.model.ContinueWatching
 import io.github.arenoros.anime365.core.model.EpisodeProgress
 import io.github.arenoros.anime365.core.model.LastWatched
+import io.github.arenoros.anime365.core.model.LibraryEntry
+import io.github.arenoros.anime365.core.model.LibraryStatus
 import io.github.arenoros.anime365.core.model.StreamQuality
 import io.github.arenoros.anime365.core.model.Translation
 import io.github.arenoros.anime365.core.model.TranslationKind
@@ -60,3 +63,9 @@ internal fun LastWatchedRow.toModel(): ContinueWatching =
                 progress = EpisodeProgress(episodeId, positionMs, durationMs, watched),
             ),
     )
+
+/** `null` — Статус из будущей версии приложения, которого эта не знает. */
+internal fun LibraryEntryRow.toModel(): LibraryEntry? =
+    LibraryStatus.of(status)?.let { status ->
+        LibraryEntry(seriesId, title, posterUrl, status, watchedEpisodes, episodeCount, newEpisodes)
+    }

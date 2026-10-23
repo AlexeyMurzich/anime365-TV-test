@@ -29,7 +29,7 @@ import io.github.arenoros.anime365.core.database.model.TranslationEntity
         FeedEpisodeEntity::class,
         TranslationEntity::class,
     ],
-    version = 2,
+    version = 3,
 )
 @TypeConverters(Converters::class)
 abstract class CacheDatabase : RoomDatabase() {

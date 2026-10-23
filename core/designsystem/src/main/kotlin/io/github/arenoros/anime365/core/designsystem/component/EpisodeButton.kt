@@ -1,15 +1,17 @@
 package io.github.arenoros.anime365.core.designsystem.component
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,7 +34,8 @@ import io.github.arenoros.anime365.core.designsystem.tokens.KadrTypography
 /**
  * Кнопка EpisodeGrid. [wide] — трейлер, спешл, фильм: подпись с иконкой вместо номера.
  * [progress] — доля просмотренного, рисуется полоской в состоянии [EpisodeState.Current].
- * [description] — что прочитает TalkBack вместо голого номера.
+ * Новый Эпизод — номер цвета `primary` и точка в углу.
+ * [description] — что прочитает TalkBack вместо голого номера; [onLongClickLabel] — что делает долгое нажатие.
  */
 @Composable
 fun EpisodeButton(
@@ -43,6 +46,8 @@ fun EpisodeButton(
     modifier: Modifier = Modifier,
     wide: Boolean = false,
     progress: Float = 0f,
+    onLongClick: (() -> Unit)? = null,
+    onLongClickLabel: String? = null,
 ) {
     val palette = KadrTheme.palette
     val current = state == EpisodeState.Current
@@ -50,6 +55,7 @@ fun EpisodeButton(
         when (state) {
             EpisodeState.Upcoming -> palette.inkDisabled
             EpisodeState.Released -> palette.ink
+            EpisodeState.New -> palette.primary
             EpisodeState.Current -> palette.onPrimaryContainer
             EpisodeState.Watched -> palette.inkMuted
         }
@@ -58,8 +64,18 @@ fun EpisodeButton(
             .heightIn(min = KadrLayout.TouchTarget)
             .clip(MaterialTheme.shapes.small)
             .background(if (current) palette.primaryContainer else palette.surfaceVariant)
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .clearAndSetSemantics { contentDescription = description },
+            .then(
+                if (onClick != null) {
+                    Modifier.combinedClickable(
+                        role = Role.Button,
+                        onLongClickLabel = onLongClickLabel,
+                        onLongClick = onLongClick,
+                        onClick = onClick,
+                    )
+                } else {
+                    Modifier
+                },
+            ).clearAndSetSemantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -84,14 +100,38 @@ fun EpisodeButton(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (current) {
+        StateMark(state, progress)
+    }
+}
+
+/** Точка Нового Эпизода в углу или полоска позиции внизу. */
+@Composable
+private fun BoxScope.StateMark(
+    state: EpisodeState,
+    progress: Float,
+) {
+    val primary = KadrTheme.palette.primary
+    when (state) {
+        EpisodeState.New -> {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(KadrSpacing.Space1)
+                    .size(6.dp)
+                    .background(primary, CircleShape),
+            )
+        }
+
+        EpisodeState.Current -> {
             Box(
                 Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth(progress.coerceIn(0f, 1f))
                     .height(3.dp)
-                    .background(palette.primary),
+                    .background(primary),
             )
         }
+
+        else -> {}
     }
 }

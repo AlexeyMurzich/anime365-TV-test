@@ -144,17 +144,24 @@ internal class PlayerViewModel
             if (status == PlayerStatus.NeedsLogin || status == PlayerStatus.NeedsSubscription) start()
         }
 
+        /** Кнопкой или автопереходом: текущий Эпизод отмечается просмотренным — к нему уже не вернутся. */
         fun playNext() {
             cancelAutoplay()
             val next = _uiState.value.nextEpisode ?: return
             val current = _uiState.value.translation ?: return
+            val playing = _uiState.value.playing()
+            val playback = snapshot()
             viewModelScope.launch {
+                // По порядку: запись позиции не должна перетереть отметку.
+                playback?.let { libraryRepository.save(it) }
+                playing?.let { (series, episode) ->
+                    libraryRepository.setWatched(series.summary, episode, watched = true)
+                }
                 val translations = translationRepository.load(next.id).getOrElse { return@launch fail(it) }
                 val match = translations.ofTeam(TranslationChoice(current.kind, current.team), current.source)
                 if (match == null) {
                     eventChannel.send(PlayerEvent.ChooseTranslation(next.id))
                 } else {
-                    saveNow()
                     episodeId = next.id
                     translationId = match.id
                     start()

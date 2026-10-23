@@ -63,6 +63,7 @@ data class EpisodeEntity(
     val label: String,
     val type: String,
     val position: Int,
+    val uploadedAt: Long?,
 )
 
 data class SeriesWithDetails(

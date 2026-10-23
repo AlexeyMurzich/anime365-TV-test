@@ -13,7 +13,7 @@ import io.github.arenoros.anime365.core.database.model.FeedEpisodeEntity
 import io.github.arenoros.anime365.core.database.model.ListStateEntity
 import io.github.arenoros.anime365.core.database.model.SeriesEntity
 import io.github.arenoros.anime365.core.database.model.SeriesListItemEntity
-import io.github.arenoros.anime365.core.model.NewEpisode
+import io.github.arenoros.anime365.core.model.FeedEpisode
 import io.github.arenoros.anime365.core.model.SeriesSummary
 import io.github.arenoros.anime365.core.network.Anime365Api
 import io.github.arenoros.anime365.core.network.ApiFields
@@ -31,7 +31,7 @@ import javax.inject.Inject
 
 /** Блоки Главной (docs/screens.md, «Главная»). */
 interface HomeRepository {
-    val newEpisodes: Flow<List<NewEpisode>>
+    val feed: Flow<List<FeedEpisode>>
     val ongoing: Flow<List<SeriesSummary>>
     val seasonTop: Flow<List<SeriesSummary>>
 
@@ -63,7 +63,7 @@ internal class OfflineFirstHomeRepository
         private val feedDao: FeedDao,
         private val clock: Clock,
     ) : HomeRepository {
-        override val newEpisodes: Flow<List<NewEpisode>> =
+        override val feed: Flow<List<FeedEpisode>> =
             feedDao.observe(NEW_EPISODES_SHOWN).map { rows -> rows.mapNotNull { it.toModel() } }
 
         override val ongoing: Flow<List<SeriesSummary>> =

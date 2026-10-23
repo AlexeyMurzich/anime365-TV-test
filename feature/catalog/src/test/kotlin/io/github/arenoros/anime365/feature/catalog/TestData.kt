@@ -1,6 +1,6 @@
 package io.github.arenoros.anime365.feature.catalog
 
-import io.github.arenoros.anime365.core.model.NewEpisode
+import io.github.arenoros.anime365.core.model.FeedEpisode
 import io.github.arenoros.anime365.core.model.ReleaseStatus
 import io.github.arenoros.anime365.core.model.SeriesSummary
 import java.time.Instant
@@ -24,7 +24,7 @@ fun summary(
 fun newEpisode(
     id: Int,
     releasedAt: String,
-) = NewEpisode(
+) = FeedEpisode(
     episodeId = id,
     seriesId = 1,
     seriesTitle = "Фрирен",

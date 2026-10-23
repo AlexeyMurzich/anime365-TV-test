@@ -7,7 +7,20 @@
     <string name="feature_account_subscription_until">Подписка активна до %1$s</string>
     <string name="feature_account_no_subscription">Нет подписки</string>
     <string name="feature_account_subscribe_on_site">Оформить на сайте</string>
-    <string name="feature_account_local_library_hint">Список и Прогресс хранятся только на этом устройстве</string>
+    <string name="feature_account_local_library_hint">Список и Прогресс хранятся только на этом устройстве. Экспорт сохраняет их копию в файл — с ним можно переехать на другое устройство.</string>
+    <string name="feature_account_export">Экспорт Списка</string>
+    <string name="feature_account_import">Импорт Списка</string>
+    <string name="feature_account_import_text">Заменить текущий Список содержимым файла или объединить их? При объединении у каждого аниме остаются более свежие Статус и Прогресс.</string>
+    <string name="feature_account_import_replace">Заменить текущий</string>
+    <string name="feature_account_import_merge">Объединить</string>
+    <string name="feature_account_cancel">Отмена</string>
+    <string name="feature_account_exported">Список сохранён: %1$d аниме</string>
+    <string name="feature_account_exported_with_progress">Сохранено: %1$d аниме из Списка и ещё %2$d с Прогрессом</string>
+    <string name="feature_account_imported">Список загружен: %1$d аниме</string>
+    <string name="feature_account_imported_with_progress">Загружено: %1$d аниме в Список и ещё %2$d с Прогрессом</string>
+    <string name="feature_account_export_failed">Не удалось сохранить файл</string>
+    <string name="feature_account_import_failed">Это не файл Списка anime365</string>
+    <string name="feature_account_import_newer">Файл сохранён более новой версией приложения. Обновите приложение и повторите импорт.</string>
 
     <string name="feature_account_login_title">Вход</string>
     <string name="feature_account_login_failed">Не удалось войти</string>

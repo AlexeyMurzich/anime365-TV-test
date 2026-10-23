@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import io.github.arenoros.anime365.core.database.CacheDatabase
 import io.github.arenoros.anime365.core.database.library.LibraryDatabase
 import io.github.arenoros.anime365.core.datastore.AccountStore
+import io.github.arenoros.anime365.core.datastore.SettingsStore
 import io.github.arenoros.anime365.core.datastore.StoredAccount
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.time.Clock
@@ -36,6 +37,14 @@ class FakeAccountStore(
 
     override suspend fun clear() {
         account.value = null
+    }
+}
+
+class FakeSettingsStore : SettingsStore {
+    override val libraryHintShown = MutableStateFlow(false)
+
+    override suspend fun setLibraryHintShown() {
+        libraryHintShown.value = true
     }
 }
 

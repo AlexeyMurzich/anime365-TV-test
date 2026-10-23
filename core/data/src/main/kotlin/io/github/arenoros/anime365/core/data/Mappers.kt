@@ -11,8 +11,8 @@ import io.github.arenoros.anime365.core.database.model.SeriesWithDetails
 import io.github.arenoros.anime365.core.model.Description
 import io.github.arenoros.anime365.core.model.Episode
 import io.github.arenoros.anime365.core.model.ExternalLink
+import io.github.arenoros.anime365.core.model.FeedEpisode
 import io.github.arenoros.anime365.core.model.Genre
-import io.github.arenoros.anime365.core.model.NewEpisode
 import io.github.arenoros.anime365.core.model.ReleaseStatus
 import io.github.arenoros.anime365.core.model.Series
 import io.github.arenoros.anime365.core.model.SeriesDetails
@@ -80,6 +80,7 @@ internal fun SeriesDto.toEpisodeEntities(): List<EpisodeEntity> =
                 label = episode.episodeFull,
                 type = episode.episodeType,
                 position = index,
+                uploadedAt = parseSiteDateTime(episode.firstUploadedDateTime)?.toEpochMilli(),
             )
         }
 
@@ -117,15 +118,23 @@ internal fun SeriesWithDetails.toModel(): Series =
                     episodes =
                         episodes
                             .sortedBy { it.position }
-                            .map { Episode(it.id, it.number, it.label, it.type) },
+                            .map {
+                                Episode(
+                                    it.id,
+                                    it.number,
+                                    it.label,
+                                    it.type,
+                                    it.uploadedAt?.let(Instant::ofEpochMilli),
+                                )
+                            },
                 )
             },
     )
 
 /** `null`, пока аниме этого Эпизода не загружено. */
-internal fun FeedEpisodeWithSeries.toModel(): NewEpisode? =
+internal fun FeedEpisodeWithSeries.toModel(): FeedEpisode? =
     series?.let { series ->
-        NewEpisode(
+        FeedEpisode(
             episodeId = episode.episodeId,
             seriesId = series.id,
             seriesTitle = series.title,

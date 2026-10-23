@@ -17,4 +17,9 @@ dependencies {
     api(libs.androidx.room.paging)
     implementation(libs.kotlinx.serialization.json)
     ksp(libs.androidx.room.compiler)
+
+    // Миграции library.db проверяются на выгруженных схемах (schemas/).
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
 }

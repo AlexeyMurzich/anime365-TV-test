@@ -1,5 +1,7 @@
 package io.github.arenoros.anime365.core.model
 
+import java.time.Instant
+
 /** Аниме в списках: столько, сколько нужно карточке и строке рейтинга. */
 data class SeriesSummary(
     val id: Int,
@@ -54,12 +56,14 @@ data class ExternalLink(
 /**
  * [label] — подпись сайта: «12 серия», «ONA 4 серия», «Трейлер».
  * [number] дробный: бывают «11.5 серия».
+ * [uploadedAt] — когда Эпизод появился на сайте; по нему узнаются Новые Эпизоды: `id` идут не по порядку выхода.
  */
 data class Episode(
     val id: Int,
     val number: Double,
     val label: String,
     val type: String,
+    val uploadedAt: Instant? = null,
 )
 
 /** Следующий Эпизод в порядке сайта: после 1-й серии — 2-я, после трейлера — 1-я. */

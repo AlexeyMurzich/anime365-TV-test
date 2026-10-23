@@ -2,6 +2,7 @@ package io.github.arenoros.anime365.feature.account
 
 import io.github.arenoros.anime365.core.model.Account
 import io.github.arenoros.anime365.core.testing.FakeAccountRepository
+import io.github.arenoros.anime365.core.testing.FakeLibraryTransfer
 import io.github.arenoros.anime365.core.testing.MainDispatcherRule
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -20,7 +21,7 @@ class AccountViewModelTest {
     @Test
     fun opensWithSubscriptionCheckOnSite() =
         runTest(mainDispatcherRule.dispatcher) {
-            val viewModel = AccountViewModel(repository, Clock.systemUTC())
+            val viewModel = AccountViewModel(repository, FakeLibraryTransfer(), Clock.systemUTC())
             backgroundScope.launch { viewModel.uiState.collect {} }
 
             assertEquals(1, repository.refreshCalls)
@@ -31,7 +32,7 @@ class AccountViewModelTest {
     fun logOutTurnsUserIntoGuest() =
         runTest(mainDispatcherRule.dispatcher) {
             repository.account.value = Account.User("Фрирен", null)
-            val viewModel = AccountViewModel(repository, Clock.systemUTC())
+            val viewModel = AccountViewModel(repository, FakeLibraryTransfer(), Clock.systemUTC())
             backgroundScope.launch { viewModel.uiState.collect {} }
 
             viewModel.logOut()

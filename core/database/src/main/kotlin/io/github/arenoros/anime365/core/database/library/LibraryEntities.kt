@@ -5,8 +5,11 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Аниме, которое пользователь смотрел. Название и постер — копией из кэша: кэш можно стереть,
- * Библиотеку — нет (ADR 0001). [translationType] и [team] — запомненный Вид перевода и Команда.
+ * Аниме в Библиотеке или просто просмотренное. Название, постер и число Эпизодов — копией из кэша:
+ * кэш можно стереть, Библиотеку — нет (ADR 0001). [translationType] и [team] — запомненный Вид
+ * перевода и Команда. [status] — `LibraryStatus.key`, `null` — аниме смотрели, но в Список не добавили.
+ * [seenUploadedAt] — время выхода (по сайту) последнего Эпизода, который был на странице аниме,
+ * когда её открывали: всё, что вышло позже, — Новые Эпизоды.
  */
 @Entity(tableName = "library_series")
 data class LibrarySeriesEntity(
@@ -18,6 +21,30 @@ data class LibrarySeriesEntity(
     val lastEpisodeId: Int?,
     val lastTranslationId: Int?,
     val lastWatchedAt: Long?,
+    val status: String? = null,
+    val statusChangedAt: Long? = null,
+    val episodeCount: Int? = null,
+    val seenUploadedAt: Long? = null,
+)
+
+/** Новый Эпизод аниме со Статусом «Смотрю»: строка живёт, пока аниме не открыли или Эпизод не начали смотреть. */
+@Entity(tableName = "new_episode", indices = [Index("seriesId")])
+data class NewEpisodeEntity(
+    @PrimaryKey val episodeId: Int,
+    val seriesId: Int,
+    val label: String,
+    val uploadedAt: Long,
+)
+
+/** Строка Списка. */
+data class LibraryEntryRow(
+    val seriesId: Int,
+    val title: String,
+    val posterUrl: String?,
+    val status: String,
+    val episodeCount: Int?,
+    val watchedEpisodes: Int,
+    val newEpisodes: Int,
 )
 
 /** Прогресс Эпизода. [label] — копией, по той же причине, что название аниме. */

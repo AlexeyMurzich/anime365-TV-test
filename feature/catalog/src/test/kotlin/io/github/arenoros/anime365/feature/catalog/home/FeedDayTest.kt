@@ -6,7 +6,7 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
 
-class NewEpisodeDayTest {
+class FeedDayTest {
     /** 22.10 21:30 UTC — уже 23.10 по Москве: день берётся по часовому поясу устройства. */
     @Test
     fun groupsByLocalDateNewestFirst() {

@@ -1,5 +1,6 @@
 package io.github.arenoros.anime365.core.designsystem.component
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,8 +10,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.Badge
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -30,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.arenoros.anime365.core.designsystem.R
+import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
@@ -79,6 +86,7 @@ fun EpisodeFeedRow(
     time: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    markLabel: String? = null,
 ) {
     val primary = KadrTheme.palette.primary
     Row(
@@ -101,11 +109,67 @@ fun EpisodeFeedRow(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        if (markLabel != null) {
+            Icon(
+                painterResource(KadrIcons.Bookmark),
+                contentDescription = markLabel,
+                Modifier.size(18.dp),
+                tint = primary,
+            )
+        }
         Text(
             time,
             style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
             color = KadrTheme.palette.inkMuted,
         )
+    }
+}
+
+/**
+ * Строка Списка: миниатюра, название, подпись, бейдж и кнопка действия справа.
+ * [badgeDescription] читает TalkBack вместо голого числа в [badge].
+ */
+@Composable
+fun LibraryListItem(
+    imageUrl: String?,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    @DrawableRes actionIcon: Int,
+    actionLabel: String,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier,
+    badge: String? = null,
+    badgeDescription: String? = null,
+) {
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(
+                start = KadrSpacing.Space4,
+                end = KadrSpacing.Space2,
+                top = KadrSpacing.Space2,
+                bottom = KadrSpacing.Space2,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space3),
+    ) {
+        Thumbnail(imageUrl, width = 56.dp)
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = KadrTheme.palette.inkMuted)
+        }
+        if (badge != null) {
+            Badge(
+                Modifier.semantics { badgeDescription?.let { contentDescription = it } },
+                containerColor = KadrTheme.palette.primary,
+                contentColor = KadrTheme.palette.onPrimary,
+            ) { Text(badge) }
+        }
+        IconButton(onClick = onAction) {
+            Icon(painterResource(actionIcon), contentDescription = actionLabel)
+        }
     }
 }
 

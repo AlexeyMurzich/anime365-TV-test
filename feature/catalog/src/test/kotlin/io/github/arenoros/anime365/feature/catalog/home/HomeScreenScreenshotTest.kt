@@ -27,15 +27,17 @@ class HomeScreenScreenshotTest {
 
     private val content =
         HomeUiState(
-            newEpisodes =
+            feed =
                 listOf(
-                    newEpisode(7, "2026-10-23T09:30:00Z").copy(seriesTitle = "Провожающая в последний путь Фрирен"),
+                    newEpisode(7, "2026-10-23T09:30:00Z")
+                        .copy(seriesId = 30414, seriesTitle = "Провожающая в последний путь Фрирен"),
                     newEpisode(12, "2026-10-23T08:05:00Z").copy(seriesTitle = "Чёрный клевер", label = "ONA 5 серия"),
                     newEpisode(3, "2026-10-22T18:40:00Z"),
                 ),
             ongoing = (1..4).map { summary(it, title = "Онгоинг с длинным названием $it") },
             seasonTop = (1..3).map { summary(10 + it) },
             isRefreshing = false,
+            watching = setOf(30414),
         )
 
     @Test

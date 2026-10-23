@@ -29,4 +29,9 @@
     <string name="feature_series_kind_voice_other">Другая озвучка</string>
     <string name="feature_series_kind_raw">RAW</string>
     <string name="feature_series_kind_other">Другое</string>
+    <string name="feature_series_add_to_list">В список</string>
+    <string name="feature_series_status_title">Статус</string>
+    <string name="feature_series_remove_from_list">Убрать из списка</string>
+    <string name="feature_series_mark_watched">Отметить просмотренной</string>
+    <string name="feature_series_unmark_watched">Снять отметку «просмотрена»</string>
 </resources>

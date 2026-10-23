@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="feature_library_title">Список</string>
+    <string name="feature_library_empty">Добавьте аниме кнопкой «В список» на его странице</string>
+    <string name="feature_library_watched_of">%1$d из %2$d эп.</string>
+    <string name="feature_library_watched">Просмотрено %1$d эп.</string>
+    <string name="feature_library_continue">Продолжить просмотр: %1$s</string>
+    <plurals name="feature_library_new_episodes">
+        <item quantity="one">%d новая серия</item>
+        <item quantity="few">%d новые серии</item>
+        <item quantity="many">%d новых серий</item>
+        <item quantity="other">%d новой серии</item>
+    </plurals>
+    <string name="feature_library_local_hint">Список хранится только на этом устройстве. Сохранить копию можно в Профиле → Экспорт Списка.</string>
+    <string name="feature_library_hint_ok">Понятно</string>
+
+    <string name="feature_library_channel_name">Новые серии</string>
+    <string name="feature_library_channel_description">Вышли серии аниме со статусом «Смотрю»</string>
+    <string name="feature_library_notification_more">%1$s и ещё %2$d</string>
 </resources>
