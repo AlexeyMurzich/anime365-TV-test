@@ -1,0 +1,23 @@
+# Gradle / Android Studio
+.gradle/
+.kotlin/
+build/
+.idea/
+*.iml
+.externalNativeBuild/
+.cxx/
+captures/
+.DS_Store
+
+# Локальные файлы и секреты
+/local.properties
+/secrets.properties
+
+# Подпись релизов
+*.jks
+*.keystore
+keystore.properties
+
+# Артефакты
+*.apk
+*.aab
