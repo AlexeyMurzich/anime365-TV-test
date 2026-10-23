@@ -1,0 +1,108 @@
+{
+  "name": "Kadr",
+  "version": 1,
+  "meta": {"source": "Визуальный язык навеян smotret-anime.co (Materialize-стиль, зелёный #1b5e20 как theme-color сайта); значения подобраны под Material 3 / Android."},
+  "color": {
+    "themes": [{"id": "light", "name": "Светлая"}, {"id": "dark", "name": "Тёмная"}],
+    "tokens": [
+      {"name": "brand", "value": {"light": "#1b5e20", "dark": "#1b5e20"}, "usage": "Фирменный зелёный: заливка TopAppBar, статус-бара, шапки дровера, блоки обложки. Только как фон; текст и иконки на нём — on-brand."},
+      {"name": "brand-deep", "value": {"light": "#103d14", "dark": "#0f3312"}, "usage": "Статус-бар над TopAppBar и нажатое состояние на brand."},
+      {"name": "on-brand", "value": {"light": "#ffffff", "dark": "#ffffff"}, "usage": "Текст и иконки на brand / brand-deep (7.9:1)."},
+      {"name": "on-brand-muted", "value": {"light": "#c8e6c9", "dark": "#c8e6c9"}, "usage": "Второстепенный текст на brand: подзаголовок в TopAppBar, неактивные вкладки на зелёном (6.0:1)."},
+
+      {"name": "primary", "value": {"light": "#2e7d32", "dark": "#81c784"}, "usage": "Интерактивный акцент: заливка главной кнопки, ссылки, активная вкладка, выбранный чип, индикатор прогресса. Как текст — на background и surface; на surface-variant — только иконки (≥3:1)."},
+      {"name": "on-primary", "value": {"light": "#ffffff", "dark": "#0b2e0f"}, "usage": "Текст и иконки на заливке primary."},
+      {"name": "primary-container", "value": {"light": "#e8f5e9", "dark": "#1f3a21"}, "usage": "Мягкая заливка: выбранный чип жанра, выбранная озвучка, текущая серия, активный пункт навигации."},
+      {"name": "on-primary-container", "value": {"light": "#1b5e20", "dark": "#c8e6c9"}, "usage": "Текст и иконки на primary-container."},
+
+      {"name": "background", "value": {"light": "#f2f2f2", "dark": "#121212"}, "usage": "Фон экрана под карточками и списками."},
+      {"name": "surface", "value": {"light": "#ffffff", "dark": "#1e1e1e"}, "usage": "Карточки, листы, нижняя навигация, дровер, диалоги."},
+      {"name": "surface-variant", "value": {"light": "#ebebeb", "dark": "#2a2a2a"}, "usage": "Поле поиска, плейсхолдер постера, кнопки серий, фон бейджа типа (TV/ONA)."},
+      {"name": "surface-raised", "value": {"light": "#ffffff", "dark": "#262626"}, "usage": "Меню, нижние листы, всплывающие подсказки: в тёмной теме на ступень светлее surface вместо тени."},
+
+      {"name": "ink", "value": {"light": "#212121", "dark": "#e6e6e6"}, "usage": "Основной текст: названия, заголовки, тело комментария. На background, surface, surface-variant."},
+      {"name": "ink-muted", "value": {"light": "#5f5f5f", "dark": "#a6a6a6"}, "usage": "Вторичный текст: оригинальное название, время, студия, мета-строка. На background, surface, surface-variant (≥4.5:1)."},
+      {"name": "ink-disabled", "value": {"light": "#9e9e9e", "dark": "#6b6b6b"}, "usage": "Недоступные элементы и плейсхолдер — не для значимого текста (ниже 4.5:1)."},
+
+      {"name": "outline", "value": {"light": "#8a8a8a", "dark": "#8a8a8a"}, "usage": "Границы контролов: обводка чипа, outlined-кнопки, поля ввода, радиокнопки (≥3:1 на surface)."},
+      {"name": "outline-variant", "value": {"light": "#e0e0e0", "dark": "#333333"}, "usage": "Разделители списков, обводка карточек в тёмной теме. Декоративно."},
+
+      {"name": "star", "value": {"light": "#9a5b00", "dark": "#ffca28"}, "usage": "Иконка звезды и число рейтинга. На surface и background (≥3:1 для иконки, ≥4.5:1 для числа)."},
+      {"name": "ongoing", "value": {"light": "#bf360c", "dark": "#ffab91"}, "usage": "Заливка бейджа «Онгоинг» и точки «новая серия». Оранжевый, чтобы отличаться от зелёного по светлоте и тону."},
+      {"name": "on-ongoing", "value": {"light": "#ffffff", "dark": "#3e1000"}, "usage": "Текст на ongoing."},
+      {"name": "subs", "value": {"light": "#1565c0", "dark": "#90caf9"}, "usage": "Метка «Субтитры» в выборе перевода; озвучка — primary. Синий против зелёного с подписью, не цветом в одиночку."},
+      {"name": "on-subs", "value": {"light": "#ffffff", "dark": "#0d2a4a"}, "usage": "Текст на subs."},
+      {"name": "error", "value": {"light": "#c62828", "dark": "#ef9a9a"}, "usage": "Ошибки загрузки, недоступная серия, удаление."},
+      {"name": "on-error", "value": {"light": "#ffffff", "dark": "#3b0000"}, "usage": "Текст на error."},
+
+      {"name": "scrim", "value": {"light": "rgba(0, 0, 0, 0.62)", "dark": "rgba(0, 0, 0, 0.62)"}, "usage": "Подложка поверх постера/кадра под текстом (рейтинг, длительность), затемнение под дровером."},
+      {"name": "on-scrim", "value": {"light": "#ffffff", "dark": "#ffffff"}, "usage": "Текст и иконки на scrim и на видео."},
+      {"name": "player-bg", "value": {"light": "#000000", "dark": "#000000"}, "usage": "Фон области плеера в обеих темах."},
+      {"name": "focus-ring", "value": {"light": "{primary}", "dark": "{primary}"}, "usage": "Кольцо фокуса (D-pad / клавиатура / Android TV): 2dp поверх 2dp зазора цвета фона."}
+    ]
+  },
+  "type": {
+    "families": {
+      "sans": "Roboto, \"Noto Sans\", system-ui, sans-serif",
+      "icons": "\"Material Icons\""
+    },
+    "groups": [
+      {"name": "Заголовки", "family": "sans", "styles": [
+        {"name": "headline", "fontSize": "24px", "lineHeight": "32px", "fontWeight": 500, "sample": "Ветер над Сакурадзакой", "usage": "Название тайтла на экране тайтла."},
+        {"name": "title-lg", "fontSize": "20px", "lineHeight": "28px", "fontWeight": 500, "sample": "Онгоинги", "usage": "Заголовок в TopAppBar."},
+        {"name": "title-md", "fontSize": "16px", "lineHeight": "24px", "fontWeight": 500, "letterSpacing": "0.15px", "sample": "Новые серии · 23.10.2026", "usage": "Заголовки секций, название в строке списка."},
+        {"name": "title-sm", "fontSize": "14px", "lineHeight": "20px", "fontWeight": 500, "letterSpacing": "0.1px", "sample": "Ветер над Сакурадзакой", "usage": "Название на постер-карточке (максимум 2 строки)."}
+      ]},
+      {"name": "Текст", "family": "sans", "styles": [
+        {"name": "body-lg", "fontSize": "16px", "lineHeight": "24px", "fontWeight": 400, "sample": "Пять подростков находят старую кинокамеру…", "usage": "Описание аниме."},
+        {"name": "body-md", "fontSize": "14px", "lineHeight": "20px", "fontWeight": 400, "sample": "Отличная серия, ждём следующую.", "usage": "Комментарии, пункты списков."},
+        {"name": "caption", "fontSize": "12px", "lineHeight": "16px", "fontWeight": 400, "letterSpacing": "0.4px", "sample": "Kaze no Sakurazaka · сегодня 09:58", "usage": "Оригинальное название, время, студия."}
+      ]},
+      {"name": "Метки", "family": "sans", "styles": [
+        {"name": "button", "fontSize": "14px", "lineHeight": "20px", "fontWeight": 500, "letterSpacing": "1.25px", "sample": "НАЧАТЬ ПРОСМОТР", "usage": "Кнопки — ВЕРХНИЙ РЕГИСТР, как в Materialize."},
+        {"name": "label", "fontSize": "12px", "lineHeight": "16px", "fontWeight": 500, "letterSpacing": "0.5px", "sample": "Онгоинг", "usage": "Чипы, бейджи, подписи нижней навигации."},
+        {"name": "numeric", "fontSize": "14px", "lineHeight": "20px", "fontWeight": 700, "sample": "9.0", "usage": "Рейтинг, номера серий; цифры табличные (tnum)."},
+        {"name": "overline", "fontSize": "11px", "lineHeight": "16px", "fontWeight": 500, "letterSpacing": "1.5px", "sample": "КАТАЛОГ АНИМЕ", "usage": "Подзаголовки групп в дровере. Верхний регистр."}
+      ]}
+    ]
+  },
+  "spacing": {
+    "tokens": [
+      {"name": "space-1", "value": "4px", "usage": "Зазор иконка–текст в бейдже, между строками мета."},
+      {"name": "space-2", "value": "8px", "usage": "Зазор между чипами и карточками в сетке, внутренний отступ бейджа."},
+      {"name": "space-3", "value": "12px", "usage": "Внутренний отступ карточки и строки списка по вертикали."},
+      {"name": "space-4", "value": "16px", "usage": "Поля экрана слева/справа, отступ контента в листах."},
+      {"name": "space-6", "value": "24px", "usage": "Между секциями главного экрана."},
+      {"name": "space-8", "value": "32px", "usage": "Крупные разрывы: перед блоком комментариев, низ экрана над навигацией."}
+    ]
+  },
+  "radius": {
+    "tokens": [
+      {"name": "radius-xs", "value": "2px", "usage": "Бейджи (рейтинг, статус, тип) — угловатость Materialize."},
+      {"name": "radius-sm", "value": "4px", "usage": "Карточки, постеры, кнопки, поле поиска, кнопки серий."},
+      {"name": "radius-md", "value": "12px", "usage": "Нижние листы (верхние углы) и диалоги."},
+      {"name": "radius-pill", "value": "16px", "usage": "Чипы жанров и фильтров (половина высоты 32dp)."},
+      {"name": "radius-full", "value": "9999px", "usage": "Аватары, FAB, индикатор новой серии."}
+    ]
+  },
+  "shadow": {
+    "note": "Тени Materialize z-depth. В тёмной теме тень заменяется более светлой поверхностью (surface-raised).",
+    "tokens": [
+      {"name": "elevation-1", "value": {"light": "0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.2)", "dark": "none"}, "usage": "Карточки, кнопки с заливкой."},
+      {"name": "elevation-2", "value": {"light": "0 4px 5px 0 rgba(0,0,0,0.14), 0 1px 10px 0 rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.3)", "dark": "0 4px 5px 0 rgba(0,0,0,0.5)"}, "usage": "TopAppBar при прокрутке, FAB, нижняя навигация."},
+      {"name": "elevation-3", "value": {"light": "0 8px 17px 2px rgba(0,0,0,0.14), 0 3px 14px 2px rgba(0,0,0,0.12), 0 5px 5px -3px rgba(0,0,0,0.2)", "dark": "0 8px 17px 2px rgba(0,0,0,0.6)"}, "usage": "Меню, нижние листы, дровер."}
+    ]
+  },
+  "layout": {
+    "note": "Размеры в dp. Значения-пропорции записаны как CSS aspect-ratio.",
+    "tokens": [
+      {"name": "app-bar-height", "value": "56px", "usage": "Высота TopAppBar."},
+      {"name": "nav-bar-height", "value": "64px", "usage": "Высота нижней навигации."},
+      {"name": "touch-target", "value": "48px", "usage": "Минимальная зона касания."},
+      {"name": "chip-height", "value": "32px", "usage": "Высота чипа."},
+      {"name": "poster-ratio", "value": "2 / 3", "usage": "Пропорция постера (225×318 ≈ 2:3)."},
+      {"name": "player-ratio", "value": "16 / 9", "usage": "Плеер и превью моментов."},
+      {"name": "grid-columns-phone", "value": "3", "usage": "Колонок постеров на телефоне в портрете (≥600dp — 5, ≥840dp — 6)."}
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Только окно до первого кадра Compose: всё остальное рисует KadrTheme. -->
+    <style name="Theme.Anime365" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

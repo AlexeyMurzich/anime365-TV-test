@@ -7,7 +7,7 @@
 ## M0 — Скелет
 
 - Модули по ADR 0002, convention plugins в `build-logic`, version catalog.
-- Hilt на KSP, type-safe Navigation Compose, четыре таба-заглушки.
+- Hilt на KSP, Navigation 3 (ADR 0009), четыре таба-заглушки.
 - Тема, сгенерированная из `tokens.json` дизайн-системы Kadr.
 - detekt, Spotless с ktlint, Android Lint с baseline, dependency-analysis.
 - GitHub Actions на каждый push: `spotlessCheck`, `detekt`, `lint`,
@@ -30,7 +30,9 @@
 - **Первым делом**: прототип `lib_ass_media` на MP4 с отдельным файлом ASS
   (ADR 0008). Не сработает — фильтр, оставляющий только диалоговые стили.
 - Вход через WebView и `/api/accessToken` (ADR 0005), Токен в DataStore,
-  зашифрованный ключом Android Keystore.
+  зашифрованный ключом Android Keystore. Файл Токена исключить из резервной
+  копии Android (`data_extraction_rules.xml`): ключ из Keystore в копию не
+  попадает, и восстановленный файл не расшифровать.
 - Выбор Перевода, Плеер на Media3 с `MediaSessionService`, PiP, фоновый звук
   (ADR 0008). Видеопоток запрашивается при каждом запуске: ссылки живут
   24 часа (см. [api-notes.md](api-notes.md)).
@@ -40,6 +42,9 @@
 ## M3 — Библиотека
 
 - Статусы, Новые Эпизоды, уведомления раз в 6 часов через WorkManager.
+- База Библиотеки входит в резервную копию Android и переживает
+  переустановку, если у пользователя включено резервное копирование —
+  проверить восстановление на устройстве.
 - Экспорт и импорт: JSON с `schemaVersion` через системный выбор файла.
   Внутри — Статусы, Прогресс, запомненные Вид перевода и Команда по каждому
   аниме, ключ — `id` аниме на сайте. Скачанные файлы не входят.

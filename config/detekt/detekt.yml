@@ -1,0 +1,24 @@
+# Поверх стандартного конфига detekt (buildUponDefaultConfig = true).
+naming:
+  FunctionNaming:
+    ignoreAnnotated:
+      - Composable
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][A-Za-z0-9]*'
+  # Файл навигации фичи держит ключи и функцию регистрации экранов вместе (ADR 0009).
+  MatchingDeclarationName:
+    excludes:
+      - '**/navigation/*Navigation.kt'
+
+style:
+  MagicNumber:
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+  UnusedPrivateMember:
+    ignoreAnnotated:
+      - Preview
+
+complexity:
+  LongParameterList:
+    functionThreshold: 8
+    ignoreDefaultParameters: true

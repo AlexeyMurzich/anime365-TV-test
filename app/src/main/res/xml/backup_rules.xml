@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 и ниже. Те же правила, что в data_extraction_rules.xml. -->
+<full-backup-content />
