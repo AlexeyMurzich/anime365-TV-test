@@ -20,6 +20,8 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.datasource.okhttp)
     implementation(libs.androidx.media3.ui)
+    // Ответ MediaSession на команды уведомления — ListenableFuture.
+    implementation(libs.guava)
     // Отдельные субтитры рисует libass (ADR 0008). Вся работа с библиотекой — только в этом модуле.
     implementation(libs.ass.media)
     implementation(libs.okhttp)

@@ -70,5 +70,9 @@ data class Episode(
 fun SeriesDetails.episodeAfter(episodeId: Int): Episode? =
     episodes.indexOfFirst { it.id == episodeId }.takeIf { it >= 0 }?.let { episodes.getOrNull(it + 1) }
 
+/** Предыдущий Эпизод в порядке сайта: перед 1-й серией — трейлер, если он есть. */
+fun SeriesDetails.episodeBefore(episodeId: Int): Episode? =
+    episodes.indexOfFirst { it.id == episodeId }.takeIf { it > 0 }?.let { episodes[it - 1] }
+
 /** С чего начинать: первый Эпизод основного типа аниме, а не трейлер перед ним. */
 val SeriesDetails.firstEpisode: Episode? get() = episodes.firstOrNull { it.type == type } ?: episodes.firstOrNull()

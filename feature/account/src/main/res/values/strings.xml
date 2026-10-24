@@ -22,6 +22,18 @@
     <string name="feature_account_import_failed">Это не файл Списка anime365</string>
     <string name="feature_account_import_newer">Файл сохранён более новой версией приложения. Обновите приложение и повторите импорт.</string>
 
+    <string name="feature_account_settings">Настройки</string>
+    <string name="feature_account_settings_notifications">Уведомления</string>
+    <string name="feature_account_settings_new_episodes">Новые серии</string>
+    <string name="feature_account_settings_new_episodes_summary">Раз в 6 часов по аниме со статусом «Смотрю». Счётчик на табе «Список» работает и без уведомлений.</string>
+    <string name="feature_account_settings_player">Плеер</string>
+    <string name="feature_account_settings_autoplay">Автопереход к следующей серии</string>
+    <string name="feature_account_settings_autoplay_summary">Через 5 секунд после конца серии</string>
+    <string name="feature_account_settings_wifi_height">Разрешение по Wi-Fi</string>
+    <string name="feature_account_settings_mobile_height">Разрешение по мобильной сети</string>
+    <string name="feature_account_settings_height">%1$dp</string>
+    <string name="feature_account_settings_height_hint">Если у перевода такого нет — ближайшее меньшее. Во время просмотра разрешение меняется в настройках плеера.</string>
+
     <string name="feature_account_login_title">Вход</string>
     <string name="feature_account_login_failed">Не удалось войти</string>
 

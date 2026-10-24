@@ -31,6 +31,7 @@ import io.github.arenoros.anime365.core.designsystem.component.BottomSheetSceneS
 import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationBar
 import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationBarItem
 import io.github.arenoros.anime365.feature.account.navigation.LoginKey
+import io.github.arenoros.anime365.feature.account.navigation.SettingsKey
 import io.github.arenoros.anime365.feature.account.navigation.SubscriptionKey
 import io.github.arenoros.anime365.feature.account.navigation.accountEntries
 import io.github.arenoros.anime365.feature.catalog.navigation.CatalogKey
@@ -199,6 +200,6 @@ private fun entryProvider(backStack: MutableList<NavKey>): (NavKey) -> NavEntry<
             onOpenEpisode = openEpisode,
             onPlay = play,
         )
-        accountEntries(onLogin = login, onBack = back)
+        accountEntries(onLogin = login, onOpenSettings = { backStack.add(SettingsKey) }, onBack = back)
     }
 }

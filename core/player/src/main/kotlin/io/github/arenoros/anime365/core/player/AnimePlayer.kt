@@ -31,13 +31,18 @@ import okhttp3.OkHttpClient
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Видеопоток одного Перевода и подписи для уведомления: [subtitle] — «7 серия · AniLibria». */
+/**
+ * Видеопоток одного Перевода и подписи для уведомления: [subtitle] — «7 серия · AniLibria».
+ * [hasPreviousEpisode] и [hasNextEpisode] — показывать ли в уведомлении ⏮ и ⏭.
+ */
 data class PlayerMedia(
     val videoUrl: String,
     val subtitlesUrl: String?,
     val title: String,
     val subtitle: String,
     val artworkUrl: String?,
+    val hasPreviousEpisode: Boolean = false,
+    val hasNextEpisode: Boolean = false,
 )
 
 private const val SEEK_INCREMENT_MS = 10_000L
@@ -63,6 +68,8 @@ class AnimePlayer
         private var session = 0
         private val endedEvents =
             MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+        private val skipEvents =
+            MutableSharedFlow<EpisodeSkip>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
         /** Создаётся при первом запуске Плеера: до него ни кодеки, ни libass не нужны. */
         override val player: Player by lazy(::build)
@@ -75,6 +82,12 @@ class AnimePlayer
         override val durationMs: Long get() = player.duration.coerceAtLeast(0)
 
         override val ended: Flow<Unit> = endedEvents
+
+        override val episodeSkips: Flow<EpisodeSkip> = skipEvents
+
+        /** Что играет сейчас — для кнопок уведомления. */
+        internal val currentMedia: PlayerMedia?
+            get() = player.currentMediaItem?.localConfiguration?.tag as? PlayerMedia
 
         override val isMeteredNetwork: Boolean
             get() = context.getSystemService(ConnectivityManager::class.java)?.isActiveNetworkMetered != false
@@ -126,6 +139,10 @@ class AnimePlayer
 
         /** libass рисует в overlay внутри [SubtitleView] экрана; у каждого нового экрана — свой. */
         internal fun attach(subtitleView: SubtitleView) = subtitleView.withAssSupport(assHandler)
+
+        internal fun skip(direction: EpisodeSkip) {
+            skipEvents.tryEmit(direction)
+        }
 
         internal fun onServiceDestroyed() {
             serviceStarted = false
@@ -185,6 +202,7 @@ private fun PlayerMedia.toMediaItem(): MediaItem {
     return MediaItem
         .Builder()
         .setUri(videoUrl)
+        .setTag(this)
         .setSubtitleConfigurations(listOfNotNull(subtitles))
         .setMediaMetadata(
             MediaMetadata

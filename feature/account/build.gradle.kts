@@ -6,7 +6,9 @@ plugins {
 
 dependencies {
     implementation(projects.core.data)
+    implementation(projects.core.datastore)
     implementation(projects.core.model)
+    implementation(projects.core.ui)
     // Выбор файла для Экспорта и Импорта Списка.
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.annotation)

@@ -32,6 +32,7 @@ object KadrIcons {
     val Settings = R.drawable.ic_settings
     val Subtitles = R.drawable.ic_subtitles
     val SkipNext = R.drawable.ic_skip_next
+    val SkipPrevious = R.drawable.ic_skip_previous
     val Translate = R.drawable.ic_translate
     val Logout = R.drawable.ic_logout
     val Upload = R.drawable.ic_upload

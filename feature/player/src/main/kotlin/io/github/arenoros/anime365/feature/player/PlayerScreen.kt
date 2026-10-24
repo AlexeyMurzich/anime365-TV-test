@@ -95,6 +95,7 @@ internal fun PlayerRoute(
                 onBack = onBack,
                 onChooseTranslation = onChooseTranslation,
                 onPlayNext = viewModel::playNext,
+                onPlayPrevious = viewModel::playPrevious,
                 onCancelAutoplay = viewModel::cancelAutoplay,
                 onRetry = viewModel::retry,
                 onLogin = onLogin,
@@ -112,6 +113,7 @@ internal class PlayerActions(
     val onBack: () -> Unit,
     val onChooseTranslation: (episodeId: Int) -> Unit,
     val onPlayNext: () -> Unit,
+    val onPlayPrevious: () -> Unit,
     val onCancelAutoplay: () -> Unit,
     val onRetry: () -> Unit,
     val onLogin: () -> Unit,
@@ -222,6 +224,8 @@ private fun Video(
                         onChooseTranslation = { state.episode?.let { actions.onChooseTranslation(it.id) } },
                         onOpenSettings = onOpenSettings,
                         onToggleFullscreen = onToggleFullscreen,
+                        onPlayPrevious = actions.onPlayPrevious,
+                        onPlayNext = actions.onPlayNext,
                     )
                 }
             }

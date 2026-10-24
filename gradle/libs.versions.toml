@@ -17,6 +17,8 @@ room = "2.8.5"
 paging = "3.5.3"
 coil = "3.6.3"
 media3 = "1.11.1"
+# Та же, что приходит с Media3: в API MediaSession — ListenableFuture.
+guava = "33.3.1-android"
 datastore = "1.2.1"
 assMedia = "0.5.1"
 lifecycle = "2.11.0"
@@ -74,6 +76,7 @@ androidx-media3-datasource-okhttp = { module = "androidx.media3:media3-datasourc
 androidx-media3-session = { module = "androidx.media3:media3-session", version.ref = "media3" }
 androidx-media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref = "media3" }
 androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
 ass-media = { module = "io.github.peerless2012:ass-media", version.ref = "assMedia" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycle" }

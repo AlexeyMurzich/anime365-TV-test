@@ -13,10 +13,12 @@ import io.github.arenoros.anime365.core.model.StreamQuality
 import io.github.arenoros.anime365.core.model.Translation
 import io.github.arenoros.anime365.core.model.TranslationKind
 import io.github.arenoros.anime365.core.model.VideoStream
+import io.github.arenoros.anime365.core.player.EpisodeSkip
 import io.github.arenoros.anime365.core.player.PlayerMedia
 import io.github.arenoros.anime365.core.player.VideoPlayer
 import io.github.arenoros.anime365.core.testing.FakeLibraryRepository
 import io.github.arenoros.anime365.core.testing.FakeSeriesRepository
+import io.github.arenoros.anime365.core.testing.FakeSettingsStore
 import io.github.arenoros.anime365.core.testing.FakeTranslationRepository
 import io.github.arenoros.anime365.core.testing.MainDispatcherRule
 import io.github.arenoros.anime365.feature.player.navigation.PlayerKey
@@ -28,6 +30,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -59,6 +62,7 @@ class PlayerViewModelTest {
                 { Result.success(this@PlayerViewModelTest.stream) }
         }
     private val library = FakeLibraryRepository()
+    private val settings = FakeSettingsStore()
     private val player = FakeVideoPlayer()
 
     @Test
@@ -187,21 +191,85 @@ class PlayerViewModelTest {
         }
 
     @Test
+    fun previousEpisodeKeepsCurrentUnwatched() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val anilibriaFirst = anilibria.copy(id = 3)
+            translations.translations.value =
+                mapOf(first.id to listOf(anilibriaFirst), second.id to listOf(anilibriaNext))
+            val viewModel = viewModel(PlayerKey(7, second.id, anilibriaNext.id))
+            assertEquals(first, viewModel.uiState.value.previousEpisode)
+
+            viewModel.playPrevious()
+
+            assertEquals(first, viewModel.uiState.value.episode)
+            assertEquals(anilibriaFirst, viewModel.uiState.value.translation)
+            assertFalse(library.progress.value[second.id]?.watched == true)
+            assertNull(viewModel.uiState.value.previousEpisode)
+        }
+
+    @Test
+    fun notificationNextPlaysNextEpisodeAndKnowsItsNeighbours() =
+        runTest(mainDispatcherRule.dispatcher) {
+            translations.translations.value = mapOf(first.id to listOf(anilibria), second.id to listOf(anilibriaNext))
+            val viewModel = viewModel()
+            val (firstMedia) = player.played.single()
+            assertEquals(false to true, firstMedia.hasPreviousEpisode to firstMedia.hasNextEpisode)
+
+            player.skipEvents.emit(EpisodeSkip.Next)
+
+            assertEquals(second, viewModel.uiState.value.episode)
+            val secondMedia = player.played.last().first
+            assertEquals(true to false, secondMedia.hasPreviousEpisode to secondMedia.hasNextEpisode)
+        }
+
+    @Test
+    fun autoplayOffLeavesEndedEpisode() =
+        runTest(mainDispatcherRule.dispatcher) {
+            translations.translations.value = mapOf(first.id to listOf(anilibria), second.id to listOf(anilibriaNext))
+            settings.settings.value = settings.settings.value.copy(autoplayNext = false)
+            val viewModel = viewModel()
+
+            player.endedEvents.emit(Unit)
+            advanceTimeBy(10_000)
+
+            assertNull(viewModel.uiState.value.nextCountdown)
+            assertEquals(1, player.played.size)
+        }
+
+    @Test
+    fun resolutionTargetComesFromSettings() =
+        runTest(mainDispatcherRule.dispatcher) {
+            translations.translations.value = mapOf(first.id to listOf(anilibria))
+            settings.settings.value = settings.settings.value.copy(wifiHeight = 720)
+
+            val viewModel = viewModel()
+
+            assertEquals(
+                "https://cdn/720",
+                player.played
+                    .single()
+                    .first.videoUrl,
+            )
+            assertEquals(720, viewModel.uiState.value.quality)
+        }
+
+    @Test
     fun qualityPrefersHighestNotAboveTarget() {
-        assertEquals(1080, pickQuality(listOf(2160, 1080, 720), metered = false))
-        assertEquals(720, pickQuality(listOf(1080, 720, 360), metered = true))
-        assertEquals(480, pickQuality(listOf(480, 360), metered = false))
+        assertEquals(1080, pickQuality(listOf(2160, 1080, 720), target = 1080))
+        assertEquals(720, pickQuality(listOf(1080, 720, 360), target = 720))
+        assertEquals(480, pickQuality(listOf(480, 360), target = 1080))
         // Все выше целевого — самое маленькое из них.
-        assertEquals(1080, pickQuality(listOf(2160, 1080), metered = true))
-        assertNull(pickQuality(emptyList(), metered = false))
+        assertEquals(1080, pickQuality(listOf(2160, 1080), target = 720))
+        assertNull(pickQuality(emptyList(), target = 1080))
     }
 
-    private fun TestScope.viewModel(): PlayerViewModel =
+    private fun TestScope.viewModel(key: PlayerKey = PlayerKey(7, first.id, anilibria.id)): PlayerViewModel =
         PlayerViewModel(
-            PlayerKey(7, first.id, anilibria.id),
+            key,
             seriesRepository,
             translations,
             library,
+            settings,
             player,
             backgroundScope,
         )
@@ -213,6 +281,8 @@ class PlayerViewModelTest {
         override var durationMs = 0L
         val endedEvents = MutableSharedFlow<Unit>()
         override val ended = endedEvents
+        val skipEvents = MutableSharedFlow<EpisodeSkip>()
+        override val episodeSkips = skipEvents
         override var isMeteredNetwork = false
         override var subtitlesEnabled = true
         override var speed = 1f

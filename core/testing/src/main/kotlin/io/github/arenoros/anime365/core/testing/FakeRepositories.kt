@@ -9,6 +9,8 @@ import io.github.arenoros.anime365.core.data.repository.LibraryTransfer
 import io.github.arenoros.anime365.core.data.repository.Playback
 import io.github.arenoros.anime365.core.data.repository.SeriesRepository
 import io.github.arenoros.anime365.core.data.repository.TranslationRepository
+import io.github.arenoros.anime365.core.datastore.AppSettings
+import io.github.arenoros.anime365.core.datastore.SettingsStore
 import io.github.arenoros.anime365.core.model.Account
 import io.github.arenoros.anime365.core.model.ContinueWatching
 import io.github.arenoros.anime365.core.model.Episode
@@ -169,5 +171,18 @@ class FakeLibraryTransfer : LibraryTransfer {
     ): Result<LibraryFileSummary> {
         imports += uri to mode
         return importResult
+    }
+}
+
+class FakeSettingsStore : SettingsStore {
+    override val libraryHintShown = MutableStateFlow(false)
+    override val settings = MutableStateFlow(AppSettings())
+
+    override suspend fun setLibraryHintShown() {
+        libraryHintShown.value = true
+    }
+
+    override suspend fun updateSettings(transform: (AppSettings) -> AppSettings) {
+        settings.value = transform(settings.value)
     }
 }

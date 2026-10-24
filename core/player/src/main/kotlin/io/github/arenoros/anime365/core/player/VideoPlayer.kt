@@ -23,6 +23,9 @@ interface VideoPlayer {
     /** Эпизод доигран до конца. */
     val ended: Flow<Unit>
 
+    /** ⏮ или ⏭ из уведомления или с гарнитуры: какую серию включить, решает экран Плеера. */
+    val episodeSkips: Flow<EpisodeSkip>
+
     /** На мобильной сети по умолчанию 720p, иначе 1080p (docs/roadmap.md, M2). */
     val isMeteredNetwork: Boolean
 
@@ -43,3 +46,5 @@ interface VideoPlayer {
 
     fun stop(session: Int)
 }
+
+enum class EpisodeSkip { Previous, Next }

@@ -23,4 +23,12 @@ class SeriesDetailsTest {
         assertNull(details.episodeAfter(second.id))
         assertNull(details.episodeAfter(999))
     }
+
+    @Test
+    fun previousEpisodeFollowsSiteOrder() {
+        assertEquals(first, details.episodeBefore(second.id))
+        assertEquals(trailer, details.episodeBefore(first.id))
+        assertNull(details.episodeBefore(trailer.id))
+        assertNull(details.episodeBefore(999))
+    }
 }

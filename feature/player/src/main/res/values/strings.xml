@@ -17,11 +17,12 @@
     <string name="feature_player_speed_value">%1$s×</string>
     <string name="feature_player_subtitles">Субтитры</string>
     <string name="feature_player_next_episode">Следующая серия</string>
+    <string name="feature_player_previous_episode">Предыдущая серия</string>
     <string name="feature_player_next_in">Следующая серия через %1$d с</string>
     <string name="feature_player_cancel">Отмена</string>
     <string name="feature_player_needs_login">Чтобы смотреть видео, войдите в аккаунт anime365</string>
     <string name="feature_player_needs_subscription">Видео доступно с подпиской anime365</string>
     <string name="feature_player_log_in">Войти</string>
     <string name="feature_player_more">Подробнее</string>
-    <string name="feature_player_no_same_team">У следующей серии нет перевода этой команды</string>
+    <string name="feature_player_no_same_team">У этой серии нет перевода той же команды</string>
 </resources>

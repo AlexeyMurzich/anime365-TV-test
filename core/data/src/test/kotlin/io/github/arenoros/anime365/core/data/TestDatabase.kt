@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import io.github.arenoros.anime365.core.database.CacheDatabase
 import io.github.arenoros.anime365.core.database.library.LibraryDatabase
 import io.github.arenoros.anime365.core.datastore.AccountStore
+import io.github.arenoros.anime365.core.datastore.AppSettings
 import io.github.arenoros.anime365.core.datastore.SettingsStore
 import io.github.arenoros.anime365.core.datastore.StoredAccount
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +46,12 @@ class FakeSettingsStore : SettingsStore {
 
     override suspend fun setLibraryHintShown() {
         libraryHintShown.value = true
+    }
+
+    override val settings = MutableStateFlow(AppSettings())
+
+    override suspend fun updateSettings(transform: (AppSettings) -> AppSettings) {
+        settings.value = transform(settings.value)
     }
 }
 

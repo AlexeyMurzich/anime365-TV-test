@@ -7,6 +7,9 @@ plugins {
 dependencies {
     api(projects.core.model)
     implementation(projects.core.designsystem)
+    // Разрешение на уведомления о Новых Эпизодах.
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.core.ktx)
 
     testImplementation(libs.junit)
 }

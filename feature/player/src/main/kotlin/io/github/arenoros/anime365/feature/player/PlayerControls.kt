@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.compose.state.PlayPauseButtonState
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import androidx.media3.ui.compose.state.rememberProgressStateWithTickInterval
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
@@ -71,11 +72,12 @@ private val SKIP_OPENING_WINDOW_MS = TimeUnit.MINUTES.toMillis(5)
 private const val SKIP_OPENING_MS = 85_000L
 private val SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
 private val Scrim = Color.Black.copy(alpha = 0.45f)
+private val DisabledControl = Color.White.copy(alpha = 0.38f)
 private const val EDGE_FRACTION = 1f / 3
 
 /**
  * Управление поверх видео: скрывается через 3 с, касание показывает и прячет, двойное касание у
- * краёв — перемотка на 10 с. [player] — `null` в скриншот-тестах.
+ * краёв — перемотка на 10 с. По краям центра — соседние серии. [player] — `null` в скриншот-тестах.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -87,6 +89,8 @@ internal fun PlayerControls(
     onChooseTranslation: () -> Unit,
     onOpenSettings: () -> Unit,
     onToggleFullscreen: () -> Unit,
+    onPlayPrevious: () -> Unit,
+    onPlayNext: () -> Unit,
     modifier: Modifier = Modifier,
     initiallyVisible: Boolean = true,
 ) {
@@ -117,32 +121,57 @@ internal fun PlayerControls(
         AnimatedVisibility(visible, enter = fadeIn(), exit = fadeOut()) {
             Box(Modifier.fillMaxSize().background(Scrim)) {
                 TopBar(state, onBack, onChooseTranslation, onOpenSettings)
-                Row(
-                    Modifier.align(Alignment.Center),
-                    horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space6),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    ControlButton(
-                        KadrIcons.Replay10,
-                        stringResource(R.string.feature_player_rewind),
-                    ) { player?.seekBack() }
-                    ControlButton(
-                        icon = if (playPause.showPlay) KadrIcons.PlayArrow else KadrIcons.Pause,
-                        description =
-                            stringResource(
-                                if (playPause.showPlay) R.string.feature_player_play else R.string.feature_player_pause,
-                            ),
-                        iconSize = 56.dp,
-                        onClick = playPause::onClick,
-                    )
-                    ControlButton(
-                        KadrIcons.Forward10,
-                        stringResource(R.string.feature_player_forward),
-                    ) { player?.seekForward() }
-                }
+                CenterControls(state, player, playPause, onPlayPrevious, onPlayNext)
                 BottomBar(state, player, fullscreen, onToggleFullscreen)
             }
         }
+    }
+}
+
+/** Соседние серии, перемотка и пауза; серии нет — кнопка неактивна. */
+@OptIn(UnstableApi::class)
+@Composable
+private fun BoxScope.CenterControls(
+    state: PlayerUiState,
+    player: Player?,
+    playPause: PlayPauseButtonState,
+    onPlayPrevious: () -> Unit,
+    onPlayNext: () -> Unit,
+) {
+    Row(
+        Modifier.align(Alignment.Center),
+        horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space4),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ControlButton(
+            KadrIcons.SkipPrevious,
+            stringResource(R.string.feature_player_previous_episode),
+            enabled = state.previousEpisode != null,
+            onClick = onPlayPrevious,
+        )
+        ControlButton(
+            KadrIcons.Replay10,
+            stringResource(R.string.feature_player_rewind),
+        ) { player?.seekBack() }
+        ControlButton(
+            icon = if (playPause.showPlay) KadrIcons.PlayArrow else KadrIcons.Pause,
+            description =
+                stringResource(
+                    if (playPause.showPlay) R.string.feature_player_play else R.string.feature_player_pause,
+                ),
+            iconSize = 56.dp,
+            onClick = playPause::onClick,
+        )
+        ControlButton(
+            KadrIcons.Forward10,
+            stringResource(R.string.feature_player_forward),
+        ) { player?.seekForward() }
+        ControlButton(
+            KadrIcons.SkipNext,
+            stringResource(R.string.feature_player_next_episode),
+            enabled = state.nextEpisode != null,
+            onClick = onPlayNext,
+        )
     }
 }
 
@@ -268,10 +297,16 @@ private fun ControlButton(
     icon: Int,
     description: String,
     iconSize: Dp = 28.dp,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick, modifier = Modifier.size(iconSize + KadrSpacing.Space4)) {
-        Icon(painterResource(icon), contentDescription = description, Modifier.size(iconSize), tint = Color.White)
+    IconButton(onClick = onClick, modifier = Modifier.size(iconSize + KadrSpacing.Space4), enabled = enabled) {
+        Icon(
+            painterResource(icon),
+            contentDescription = description,
+            Modifier.size(iconSize),
+            tint = if (enabled) Color.White else DisabledControl,
+        )
     }
 }
 

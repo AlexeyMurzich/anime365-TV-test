@@ -13,6 +13,7 @@ import io.github.arenoros.anime365.core.data.repository.Playback
 import io.github.arenoros.anime365.core.data.repository.SeriesRepository
 import io.github.arenoros.anime365.core.data.repository.SubscriptionRequiredException
 import io.github.arenoros.anime365.core.data.repository.TranslationRepository
+import io.github.arenoros.anime365.core.datastore.SettingsStore
 import io.github.arenoros.anime365.core.model.Episode
 import io.github.arenoros.anime365.core.model.EpisodeProgress
 import io.github.arenoros.anime365.core.model.Series
@@ -20,7 +21,9 @@ import io.github.arenoros.anime365.core.model.Translation
 import io.github.arenoros.anime365.core.model.TranslationChoice
 import io.github.arenoros.anime365.core.model.VideoStream
 import io.github.arenoros.anime365.core.model.episodeAfter
+import io.github.arenoros.anime365.core.model.episodeBefore
 import io.github.arenoros.anime365.core.model.ofTeam
+import io.github.arenoros.anime365.core.player.EpisodeSkip
 import io.github.arenoros.anime365.core.player.PlayerMedia
 import io.github.arenoros.anime365.core.player.VideoPlayer
 import io.github.arenoros.anime365.feature.player.navigation.PlayerKey
@@ -53,7 +56,7 @@ internal sealed interface PlayerStatus {
 }
 
 internal sealed interface PlayerEvent {
-    /** У следующего Эпизода нет Перевода той же Команды: снекбар и Выбор Перевода (docs/screens.md). */
+    /** У соседнего Эпизода нет Перевода той же Команды: снекбар и Выбор Перевода (docs/screens.md). */
     data class ChooseTranslation(
         val episodeId: Int,
     ) : PlayerEvent
@@ -74,20 +77,14 @@ internal data class PlayerUiState(
     val nextCountdown: Int? = null,
 ) {
     val nextEpisode: Episode? get() = episode?.let { series?.details?.episodeAfter(it.id) }
+    val previousEpisode: Episode? get() = episode?.let { series?.details?.episodeBefore(it.id) }
 }
 
-// docs/roadmap.md, M2: 1080p по Wi-Fi, 720p по мобильной сети.
-private const val WIFI_HEIGHT = 1080
-private const val MOBILE_HEIGHT = 720
-
-/** Самое большое Разрешение не выше целевого; если все выше — самое маленькое. */
+/** Самое большое Разрешение не выше целевого из Настроек; если все выше — самое маленькое. */
 internal fun pickQuality(
     heights: List<Int>,
-    metered: Boolean,
-): Int? {
-    val target = if (metered) MOBILE_HEIGHT else WIFI_HEIGHT
-    return heights.filter { it <= target }.maxOrNull() ?: heights.minOrNull()
-}
+    target: Int,
+): Int? = heights.filter { it <= target }.maxOrNull() ?: heights.minOrNull()
 
 private const val SAVE_INTERVAL_MS = 10_000L
 private const val NEXT_EPISODE_COUNTDOWN_SECONDS = 5
@@ -101,6 +98,7 @@ internal class PlayerViewModel
         private val seriesRepository: SeriesRepository,
         private val translationRepository: TranslationRepository,
         private val libraryRepository: LibraryRepository,
+        private val settingsStore: SettingsStore,
         val videoPlayer: VideoPlayer,
         @param:ApplicationScope private val applicationScope: CoroutineScope,
     ) : ViewModel() {
@@ -124,6 +122,14 @@ internal class PlayerViewModel
             }
             viewModelScope.launch { videoPlayer.ended.collect { onEnded() } }
             viewModelScope.launch {
+                videoPlayer.episodeSkips.collect { skip ->
+                    when (skip) {
+                        EpisodeSkip.Previous -> playPrevious()
+                        EpisodeSkip.Next -> playNext()
+                    }
+                }
+            }
+            viewModelScope.launch {
                 // Пока играет — раз в 10 секунд; пауза — тоже повод записать позицию.
                 videoPlayer.playing.collectLatest { playing ->
                     snapshot()?.let { libraryRepository.save(it) }
@@ -145,24 +151,37 @@ internal class PlayerViewModel
         }
 
         /** Кнопкой или автопереходом: текущий Эпизод отмечается просмотренным — к нему уже не вернутся. */
-        fun playNext() {
+        fun playNext() = switchEpisode(_uiState.value.nextEpisode, markWatched = true)
+
+        /** Назад — не знак, что текущий досмотрен: остаётся его позиция. */
+        fun playPrevious() = switchEpisode(_uiState.value.previousEpisode, markWatched = false)
+
+        /** Тот же Перевод — по Команде; у соседнего Эпизода её нет — Выбор Перевода. */
+        private fun switchEpisode(
+            target: Episode?,
+            markWatched: Boolean,
+        ) {
             cancelAutoplay()
-            val next = _uiState.value.nextEpisode ?: return
-            val current = _uiState.value.translation ?: return
-            val playing = _uiState.value.playing()
+            val episode = target ?: return
+            val translation = _uiState.value.translation ?: return
+            val playing = _uiState.value.playing()?.takeIf { markWatched }
             val playback = snapshot()
             viewModelScope.launch {
                 // По порядку: запись позиции не должна перетереть отметку.
                 playback?.let { libraryRepository.save(it) }
-                playing?.let { (series, episode) ->
-                    libraryRepository.setWatched(series.summary, episode, watched = true)
+                playing?.let { (series, current) ->
+                    libraryRepository.setWatched(series.summary, current, watched = true)
                 }
-                val translations = translationRepository.load(next.id).getOrElse { return@launch fail(it) }
-                val match = translations.ofTeam(TranslationChoice(current.kind, current.team), current.source)
+                val translations = translationRepository.load(episode.id).getOrElse { return@launch fail(it) }
+                val match =
+                    translations.ofTeam(
+                        TranslationChoice(translation.kind, translation.team),
+                        translation.source,
+                    )
                 if (match == null) {
-                    eventChannel.send(PlayerEvent.ChooseTranslation(next.id))
+                    eventChannel.send(PlayerEvent.ChooseTranslation(episode.id))
                 } else {
-                    episodeId = next.id
+                    episodeId = episode.id
                     translationId = match.id
                     start()
                 }
@@ -216,7 +235,9 @@ internal class PlayerViewModel
                     return@launch fail(IllegalStateException("Translation $translationId of $episodeId is gone"))
                 }
                 val stream = translationRepository.stream(translationId).getOrElse { return@launch fail(it) }
-                val height = pickQuality(stream.qualities.map { it.height }, videoPlayer.isMeteredNetwork)
+                val settings = settingsStore.settings.first()
+                val target = if (videoPlayer.isMeteredNetwork) settings.mobileHeight else settings.wifiHeight
+                val height = pickQuality(stream.qualities.map { it.height }, target)
                 val url = stream.qualities.first { it.height == height }.url
                 // Досмотренный Эпизод открывается с начала.
                 val start = libraryRepository.progressOf(episodeId)?.takeUnless { it.watched }?.positionMs ?: 0
@@ -245,6 +266,7 @@ internal class PlayerViewModel
             if (_uiState.value.nextEpisode == null) return
             countdown =
                 viewModelScope.launch {
+                    if (!settingsStore.settings.first().autoplayNext) return@launch
                     for (seconds in NEXT_EPISODE_COUNTDOWN_SECONDS downTo 1) {
                         _uiState.update { it.copy(nextCountdown = seconds) }
                         delay(SECOND_MS)
@@ -293,6 +315,8 @@ internal class PlayerViewModel
                 title = series.summary.title,
                 subtitle = listOf(episode.label, translation.team).filter { it.isNotEmpty() }.joinToString(" · "),
                 artworkUrl = series.details?.largePosterUrl ?: series.summary.posterUrl,
+                hasPreviousEpisode = series.details?.episodeBefore(episode.id) != null,
+                hasNextEpisode = series.details?.episodeAfter(episode.id) != null,
             )
 
         @AssistedFactory

@@ -1,11 +1,6 @@
 package io.github.arenoros.anime365.feature.series
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,7 +49,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -82,6 +76,7 @@ import io.github.arenoros.anime365.core.model.SeriesDetails
 import io.github.arenoros.anime365.core.model.SeriesSummary
 import io.github.arenoros.anime365.core.model.WatchAction
 import io.github.arenoros.anime365.core.ui.EpisodeGrid
+import io.github.arenoros.anime365.core.ui.rememberNotificationPermissionRequest
 
 private val POSTER_WIDTH = 120.dp
 
@@ -112,20 +107,6 @@ internal fun SeriesRoute(
         onSetWatched = viewModel::setWatched,
         onBack = onBack,
     )
-}
-
-/** Уведомления о Новых Эпизодах — только по аниме «Смотрю»: разрешение спрашиваем, когда такое появляется. */
-@Composable
-private fun rememberNotificationPermissionRequest(): () -> Unit {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return {}
-    val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    return {
-        val permission = Manifest.permission.POST_NOTIFICATIONS
-        if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
-            launcher.launch(permission)
-        }
-    }
 }
 
 @Composable

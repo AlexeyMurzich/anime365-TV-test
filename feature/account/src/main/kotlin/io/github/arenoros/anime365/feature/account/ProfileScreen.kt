@@ -60,6 +60,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 internal fun ProfileRoute(
     onLogin: () -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -90,6 +91,7 @@ internal fun ProfileRoute(
         viewModel.now(),
         onLogin = onLogin,
         onLogOut = viewModel::logOut,
+        onOpenSettings = onOpenSettings,
         onExport = { exportFile.launch(viewModel.exportFileName()) },
         // Не все файловые менеджеры знают тип .json.
         onImport = { openFile.launch(arrayOf(LIBRARY_FILE_TYPE, "application/octet-stream")) },
@@ -138,13 +140,14 @@ private fun Resources.summary(
     }
 }
 
-/** Пункты меню из docs/screens.md появляются вместе со своими фичами: Настройки, Публикации. */
+/** Пункты меню из docs/screens.md появляются вместе со своими фичами: Мои публикации — с Публикацией. */
 @Composable
 internal fun ProfileScreen(
     account: Account?,
     now: Instant,
     onLogin: () -> Unit,
     onLogOut: () -> Unit,
+    onOpenSettings: () -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
     modifier: Modifier = Modifier,
@@ -177,6 +180,7 @@ internal fun ProfileScreen(
             }
             HorizontalDivider()
             Column {
+                MenuRow(KadrIcons.Settings, stringResource(R.string.feature_account_settings), onOpenSettings)
                 MenuRow(KadrIcons.Upload, stringResource(R.string.feature_account_export), onExport)
                 MenuRow(KadrIcons.Download, stringResource(R.string.feature_account_import), onImport)
             }

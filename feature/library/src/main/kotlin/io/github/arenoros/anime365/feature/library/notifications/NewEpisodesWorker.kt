@@ -13,10 +13,14 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import io.github.arenoros.anime365.core.data.repository.LibraryRepository
 import io.github.arenoros.anime365.core.data.repository.SeriesRepository
+import io.github.arenoros.anime365.core.datastore.SettingsStore
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
-/** Проверяет аниме со Статусом «Смотрю» и сообщает о Новых Эпизодах (docs/screens.md, «Уведомления»). */
+/**
+ * Проверяет аниме со Статусом «Смотрю» и сообщает о Новых Эпизодах (docs/screens.md, «Уведомления»).
+ * Уведомления выключены в Настройках — Новые Эпизоды всё равно записываются: их видно на табе «Список».
+ */
 @HiltWorker
 internal class NewEpisodesWorker
     @AssistedInject
@@ -26,14 +30,16 @@ internal class NewEpisodesWorker
         private val library: LibraryRepository,
         private val series: SeriesRepository,
         private val notifier: NewEpisodesNotifier,
+        private val settings: SettingsStore,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
+            val notify = settings.settings.first().newEpisodeNotifications
             library.watching().forEach { id ->
                 // Недоступная страница одного аниме не мешает проверить остальные.
                 if (series.refresh(id, force = true).isFailure) return@forEach
                 val loaded = series.series(id).first() ?: return@forEach
                 val fresh = library.recordNewEpisodes(loaded)
-                if (fresh.isNotEmpty()) notifier.notify(loaded.summary, fresh)
+                if (notify && fresh.isNotEmpty()) notifier.notify(loaded.summary, fresh)
             }
             return Result.success()
         }
