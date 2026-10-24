@@ -10,7 +10,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Холодный запуск без профиля и с ним: разница — то, что даёт Baseline Profile. Меряется на телефоне. */
+/**
+ * Холодный запуск без профиля и с ним: разница — то, что даёт Baseline Profile. Меряется на телефоне.
+ * timeToInitialDisplay — первый кадр, timeToFullDisplay — Главная с лентой (ReportDrawnWhen в HomeRoute).
+ */
 @RunWith(AndroidJUnit4::class)
 class StartupBenchmark {
     @get:Rule
@@ -32,6 +35,7 @@ class StartupBenchmark {
         ) {
             pressHome()
             startActivityAndWait()
+            waitForHome()
         }
 
     private companion object {

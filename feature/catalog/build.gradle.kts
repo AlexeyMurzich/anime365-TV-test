@@ -9,6 +9,8 @@ dependencies {
     implementation(projects.core.model)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.annotation)
+    // ReportDrawnWhen: готовая Главная для замера запуска.
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.paging.compose)

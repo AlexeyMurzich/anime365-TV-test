@@ -1,5 +1,6 @@
 package io.github.arenoros.anime365.feature.catalog.home
 
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -62,6 +63,9 @@ internal fun HomeRoute(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // Главная готова, когда есть что показать или обновление закончилось: это timeToFullDisplay
+    // в StartupBenchmark (baselineprofile).
+    ReportDrawnWhen { !state.isEmpty || !state.isRefreshing }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {

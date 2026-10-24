@@ -7,9 +7,13 @@ import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 import java.util.regex.Pattern
 
-internal const val PACKAGE_NAME = "io.github.arenoros.anime365"
+// Сборки для замеров — со своим id, чтобы не мешать установленному релизу (app/build.gradle.kts).
+internal const val PACKAGE_NAME = "io.github.arenoros.anime365.benchmark"
 
 private const val TIMEOUT_MS = 10_000L
+
+// Строка Новой серии на Главной: «2 серия · Мир грёз».
+private val FEED_ROW = Pattern.compile("\\d+ серия.*")
 
 // Главная кнопка экрана Аниме: «НАЧАТЬ ПРОСМОТР» или «ПРОДОЛЖИТЬ · 7 серия».
 private val WATCH_BUTTON = Pattern.compile("(?i)(начать|продолжить).*")
@@ -19,6 +23,7 @@ private val WATCH_BUTTON = Pattern.compile("(?i)(начать|продолжит
  * Без сети вместо списков — экран ошибки; путь всё равно проходится до конца.
  */
 internal fun MacrobenchmarkScope.browse() {
+    waitForHome()
     scrollList()
     openTab("Каталог")
     scrollList()
@@ -34,7 +39,12 @@ internal fun MacrobenchmarkScope.browse() {
     openTab("Главная")
 }
 
-private fun MacrobenchmarkScope.openTab(label: String) {
+/** Главная с лентой, а не заглушка: так замер запуска дожидается reportFullyDrawn. */
+internal fun MacrobenchmarkScope.waitForHome() {
+    device.wait(Until.hasObject(By.text(FEED_ROW)), TIMEOUT_MS)
+}
+
+internal fun MacrobenchmarkScope.openTab(label: String) {
     device.findObject(By.text(label))?.click()
     device.waitForIdle()
 }
@@ -45,7 +55,7 @@ private fun MacrobenchmarkScope.mainList(): UiObject2? {
     return device.findObjects(By.scrollable(true)).maxByOrNull { it.visibleBounds.height() }
 }
 
-private fun MacrobenchmarkScope.scrollList() {
+internal fun MacrobenchmarkScope.scrollList() {
     val list = mainList() ?: return
     // Отступ от краёв: жест от самого края экрана система принимает за «Назад».
     list.setGestureMargin(device.displayWidth / 5)

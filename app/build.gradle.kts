@@ -85,6 +85,16 @@ baselineProfile {
     mergeIntoMain = true
 }
 
+// Сборки для замеров и снятия профиля подписаны debug-ключом: со своим id они ставятся рядом с релизом,
+// а не поверх него. Build types создаёт плагин baselineprofile, поэтому — в finalizeDsl после него.
+androidComponents {
+    finalizeDsl { android ->
+        android.buildTypes
+            .matching { it.name == "benchmarkRelease" || it.name == "nonMinifiedRelease" }
+            .configureEach { applicationIdSuffix = ".benchmark" }
+    }
+}
+
 sentry {
     // mapping.txt уходит в Sentry только из CI релиза, где есть токен; локально и в форках — нет.
     autoUploadProguardMapping = !providers.environmentVariable("SENTRY_AUTH_TOKEN").orNull.isNullOrEmpty()

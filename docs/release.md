@@ -88,3 +88,15 @@ Organization Tokens в arenoros.sentry.io): он нужен, чтобы `mapping
 ```bash
 ./gradlew :baselineprofile:connectedBenchmarkReleaseAndroidTest
 ```
+
+`StartupBenchmark` — холодный запуск до первого кадра и до Главной с лентой,
+`ScrollBenchmark` — первая прокрутка Главной и Каталога. Сборка для замеров
+ставится с id `io.github.arenoros.anime365.benchmark` рядом с релизом и после
+замера удаляется.
+
+Note 10 (Android 12), v0.1.0, медианы по 10 запускам, без профиля → с профилем:
+
+- первый кадр: 514 → 480 мс;
+- Главная с лентой: 644 → 573 мс;
+- прокрутка Главной и Каталога, P99 кадра на CPU: 59 → 36 мс; P50 и P90 почти
+  не меняются.
