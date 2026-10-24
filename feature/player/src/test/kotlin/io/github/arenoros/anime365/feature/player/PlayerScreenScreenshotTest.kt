@@ -63,6 +63,9 @@ class PlayerScreenScreenshotTest {
     fun portrait() = capture("player", playing)
 
     @Test
+    fun portraitDark() = capture("player_dark", playing, darkTheme = true)
+
+    @Test
     fun portraitLargeFont() = capture("player_font200", playing, fontScale = 2f)
 
     @Test
@@ -79,7 +82,8 @@ class PlayerScreenScreenshotTest {
         name: String,
         state: PlayerUiState,
         fontScale: Float = 1f,
-    ) = compose.captureScreen(name, fontScale) {
+        darkTheme: Boolean = false,
+    ) = compose.captureScreen(name, fontScale, darkTheme) {
         PlayerScreen(
             state = state,
             player = null,

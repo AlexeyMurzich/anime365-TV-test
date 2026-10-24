@@ -363,6 +363,7 @@ private fun PortraitDetails(
                     ?.title
                     .orEmpty(),
                 style = MaterialTheme.typography.titleLarge,
+                color = KadrTheme.palette.ink,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
