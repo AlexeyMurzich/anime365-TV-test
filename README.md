@@ -6,6 +6,22 @@
 
 Статус: веха M6 — первый релиз ([docs/roadmap.md](docs/roadmap.md)).
 
+## Скриншоты
+
+Снято с приложения на реальном устройстве. Нажмите на изображение, чтобы
+открыть его в полном разрешении.
+
+| Главная | Каталог | Страница аниме |
+|:---:|:---:|:---:|
+| [<img src="docs/screenshots/home.png" width="260" alt="Главная: продолжить просмотр и новые серии">](docs/screenshots/home.png) | [<img src="docs/screenshots/catalog.png" width="260" alt="Каталог аниме с постерами и фильтрами">](docs/screenshots/catalog.png) | [<img src="docs/screenshots/series.png" width="260" alt="Страница аниме: описание, рейтинг и жанры">](docs/screenshots/series.png) |
+
+| Плеер | Список | Выбор перевода |
+|:---:|:---:|:---:|
+| [<img src="docs/screenshots/player-controls.png" width="260" alt="Плеер с видео, управлением и списком серий">](docs/screenshots/player-controls.png) | [<img src="docs/screenshots/library.png" width="260" alt="Локальная библиотека аниме">](docs/screenshots/library.png) | [<img src="docs/screenshots/translations.png" width="260" alt="Выбор команды перевода и разрешения">](docs/screenshots/translations.png) |
+
+[Полная галерея — 28 снимков экранов и меню](docs/screenshots/README.md):
+фильтры, серии, вход, настройки, скачивание, мини-плеер и полный экран.
+
 ## Установка
 
 APK — в [Releases](https://github.com/Arenoros/anime365/releases). Почти всем
