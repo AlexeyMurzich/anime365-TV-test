@@ -30,6 +30,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Sentry запускается только с согласия пользователя: CrashReports. -->
+        <meta-data
+            android:name="io.sentry.auto-init"
+            android:value="false" />
+
         <!-- WorkManager создаёт Anime365Application: ему нужна фабрика воркеров Hilt. -->
         <provider
             android:name="androidx.startup.InitializationProvider"

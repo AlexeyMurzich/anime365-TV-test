@@ -22,14 +22,25 @@ data object LoginKey : NavKey
 @Serializable
 data object SubscriptionKey : NavKey
 
-/** [onBack] закрывает и Вход, и Нужна Подписка — и после успеха, и по кнопке. */
+/**
+ * [onBack] закрывает и Вход, и Нужна Подписка — и после успеха, и по кнопке. [checksUpdates] и
+ * [crashReportsAvailable] зависят от сборки: обновления — только у prod, отчёты — только с DSN Sentry.
+ */
 fun EntryProviderScope<NavKey>.accountEntries(
     onLogin: () -> Unit,
     onOpenSettings: () -> Unit,
     onBack: () -> Unit,
+    checksUpdates: Boolean,
+    crashReportsAvailable: Boolean,
 ) {
-    entry<ProfileKey> { ProfileRoute(onLogin = onLogin, onOpenSettings = onOpenSettings) }
-    entry<SettingsKey> { SettingsRoute(onBack = onBack) }
+    entry<ProfileKey> {
+        ProfileRoute(
+            onLogin = onLogin,
+            onOpenSettings = onOpenSettings,
+            checksUpdates = checksUpdates,
+        )
+    }
+    entry<SettingsKey> { SettingsRoute(onBack = onBack, crashReportsAvailable = crashReportsAvailable) }
     entry<LoginKey> { LoginRoute(onDone = onBack, onClose = onBack) }
     entry<SubscriptionKey> { SubscriptionRoute(onDone = onBack, onBack = onBack) }
 }

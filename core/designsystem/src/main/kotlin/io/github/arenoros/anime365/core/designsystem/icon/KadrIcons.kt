@@ -38,4 +38,5 @@ object KadrIcons {
     val Upload = R.drawable.ic_upload
     val Download = R.drawable.ic_download
     val Delete = R.drawable.ic_delete
+    val Update = R.drawable.ic_update
 }

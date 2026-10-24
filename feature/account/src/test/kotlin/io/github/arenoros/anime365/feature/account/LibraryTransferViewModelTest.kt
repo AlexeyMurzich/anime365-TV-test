@@ -6,6 +6,7 @@ import io.github.arenoros.anime365.core.data.repository.LibraryFileSummary
 import io.github.arenoros.anime365.core.data.repository.UnsupportedLibraryFileException
 import io.github.arenoros.anime365.core.testing.FakeAccountRepository
 import io.github.arenoros.anime365.core.testing.FakeLibraryTransfer
+import io.github.arenoros.anime365.core.testing.FakeUpdateRepository
 import io.github.arenoros.anime365.core.testing.MainDispatcherRule
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -32,6 +33,7 @@ class LibraryTransferViewModelTest {
             FakeAccountRepository(),
             transfer,
             Clock.fixed(Instant.parse("2026-10-23T22:30:00Z"), ZoneId.of("UTC")),
+            FakeUpdateRepository(),
         )
 
     @Test

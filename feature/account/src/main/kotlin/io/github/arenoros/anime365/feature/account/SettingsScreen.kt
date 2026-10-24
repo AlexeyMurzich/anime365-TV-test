@@ -41,6 +41,7 @@ private val HEIGHTS = listOf(2160, 1080, 720, 480, 360)
 @Composable
 internal fun SettingsRoute(
     onBack: () -> Unit,
+    crashReportsAvailable: Boolean,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -49,10 +50,14 @@ internal fun SettingsRoute(
         onUpdate = viewModel::update,
         onEnableNotifications = rememberNotificationPermissionRequest(),
         onBack = onBack,
+        crashReportsAvailable = crashReportsAvailable,
     )
 }
 
-/** Уведомления, Плеер и Скачивание (docs/screens.md, «Настройки»); остальные пункты — вместе со своими фичами. */
+/**
+ * Уведомления, Плеер, Скачивание и отчёты о сбоях (docs/screens.md, «Настройки»); остальные пункты — вместе
+ * со своими фичами. Отчётов нет в сборках без DSN Sentry: dev, форки, локальные (ADR 0006).
+ */
 @Composable
 internal fun SettingsScreen(
     settings: AppSettings?,
@@ -60,6 +65,7 @@ internal fun SettingsScreen(
     onEnableNotifications: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    crashReportsAvailable: Boolean = false,
 ) {
     Scaffold(
         modifier = modifier,
@@ -86,25 +92,7 @@ internal fun SettingsScreen(
                 },
             )
             HorizontalDivider(Modifier.padding(vertical = KadrSpacing.Space2))
-            SectionTitle(R.string.feature_account_settings_player)
-            SwitchRow(
-                title = stringResource(R.string.feature_account_settings_autoplay),
-                summary = stringResource(R.string.feature_account_settings_autoplay_summary),
-                checked = settings.autoplayNext,
-                onCheckedChange = { enabled -> onUpdate { it.copy(autoplayNext = enabled) } },
-            )
-            HeightChoice(R.string.feature_account_settings_wifi_height, settings.wifiHeight) { height ->
-                onUpdate { it.copy(wifiHeight = height) }
-            }
-            HeightChoice(R.string.feature_account_settings_mobile_height, settings.mobileHeight) { height ->
-                onUpdate { it.copy(mobileHeight = height) }
-            }
-            Text(
-                stringResource(R.string.feature_account_settings_height_hint),
-                Modifier.padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space2),
-                style = MaterialTheme.typography.bodySmall,
-                color = KadrTheme.palette.inkMuted,
-            )
+            PlayerSettings(settings, onUpdate)
             HorizontalDivider(Modifier.padding(vertical = KadrSpacing.Space2))
             SectionTitle(R.string.feature_account_settings_downloads)
             SwitchRow(
@@ -116,8 +104,43 @@ internal fun SettingsScreen(
             HeightChoice(R.string.feature_account_settings_download_height, settings.downloadHeight) { height ->
                 onUpdate { it.copy(downloadHeight = height) }
             }
+            if (crashReportsAvailable) {
+                HorizontalDivider(Modifier.padding(vertical = KadrSpacing.Space2))
+                SwitchRow(
+                    title = stringResource(R.string.feature_account_settings_crash_reports),
+                    summary = stringResource(R.string.feature_account_settings_crash_reports_summary),
+                    checked = settings.crashReports,
+                    onCheckedChange = { enabled -> onUpdate { it.copy(crashReports = enabled) } },
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun PlayerSettings(
+    settings: AppSettings,
+    onUpdate: ((AppSettings) -> AppSettings) -> Unit,
+) {
+    SectionTitle(R.string.feature_account_settings_player)
+    SwitchRow(
+        title = stringResource(R.string.feature_account_settings_autoplay),
+        summary = stringResource(R.string.feature_account_settings_autoplay_summary),
+        checked = settings.autoplayNext,
+        onCheckedChange = { enabled -> onUpdate { it.copy(autoplayNext = enabled) } },
+    )
+    HeightChoice(R.string.feature_account_settings_wifi_height, settings.wifiHeight) { height ->
+        onUpdate { it.copy(wifiHeight = height) }
+    }
+    HeightChoice(R.string.feature_account_settings_mobile_height, settings.mobileHeight) { height ->
+        onUpdate { it.copy(mobileHeight = height) }
+    }
+    Text(
+        stringResource(R.string.feature_account_settings_height_hint),
+        Modifier.padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space2),
+        style = MaterialTheme.typography.bodySmall,
+        color = KadrTheme.palette.inkMuted,
+    )
 }
 
 @Composable

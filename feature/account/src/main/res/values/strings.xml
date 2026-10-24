@@ -20,6 +20,13 @@
     <string name="feature_account_imported_with_progress">Загружено: %1$d аниме в Список и ещё %2$d с Прогрессом</string>
     <string name="feature_account_export_failed">Не удалось сохранить файл</string>
     <string name="feature_account_import_failed">Это не файл Списка anime365</string>
+    <string name="feature_account_check_updates">Проверить обновления</string>
+    <string name="feature_account_update_title">Доступно обновление</string>
+    <string name="feature_account_update_version">Версия %1$s</string>
+    <string name="feature_account_update">Обновить</string>
+    <string name="feature_account_update_later">Позже</string>
+    <string name="feature_account_update_latest">Установлена последняя версия</string>
+    <string name="feature_account_update_failed">Не удалось проверить обновления</string>
     <string name="feature_account_import_newer">Файл сохранён более новой версией приложения. Обновите приложение и повторите импорт.</string>
 
     <string name="feature_account_settings">Настройки</string>
@@ -36,6 +43,8 @@
     <string name="feature_account_settings_download_wifi_only">Только по Wi-Fi</string>
     <string name="feature_account_settings_download_wifi_only_summary">По мобильной сети скачивание ждёт Wi-Fi</string>
     <string name="feature_account_settings_download_height">Разрешение скачивания</string>
+    <string name="feature_account_settings_crash_reports">Отправлять отчёты о сбоях</string>
+    <string name="feature_account_settings_crash_reports_summary">Без имени и без данных входа</string>
     <string name="feature_account_settings_height_hint">Если у перевода такого нет — ближайшее меньшее. Во время просмотра разрешение меняется в настройках плеера.</string>
 
     <string name="feature_account_login_title">Вход</string>

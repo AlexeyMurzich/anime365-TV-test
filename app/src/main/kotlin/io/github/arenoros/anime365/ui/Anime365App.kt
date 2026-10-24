@@ -42,6 +42,8 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
+import io.github.arenoros.anime365.CHECKS_UPDATES
+import io.github.arenoros.anime365.CrashReports
 import io.github.arenoros.anime365.R
 import io.github.arenoros.anime365.core.designsystem.component.BottomSheetSceneStrategy
 import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationBar
@@ -343,6 +345,12 @@ private fun entryProvider(
             onOpenEpisode = openEpisode,
             onPlay = play,
         )
-        accountEntries(onLogin = login, onOpenSettings = { backStack.add(SettingsKey) }, onBack = back)
+        accountEntries(
+            onLogin = login,
+            onOpenSettings = { backStack.add(SettingsKey) },
+            onBack = back,
+            checksUpdates = CHECKS_UPDATES,
+            crashReportsAvailable = CrashReports.available,
+        )
     }
 }

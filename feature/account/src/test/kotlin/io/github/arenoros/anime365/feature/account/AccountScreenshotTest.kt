@@ -2,6 +2,7 @@ package io.github.arenoros.anime365.feature.account
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
+import io.github.arenoros.anime365.core.data.repository.AppUpdate
 import io.github.arenoros.anime365.core.model.Account
 import io.github.arenoros.anime365.core.testing.captureScreen
 import org.junit.Rule
@@ -51,6 +52,12 @@ class AccountScreenshotTest {
             )
         }
 
+    @Test
+    fun updateAvailable() =
+        compose.captureScreen("update_dialog") {
+            UpdateDialog(AppUpdate("0.2.0", "- Скачивание серий\n- Окно Плеера поверх приложения", ""), onDismiss = {})
+        }
+
     private fun profile(
         name: String,
         account: Account,
@@ -64,6 +71,7 @@ class AccountScreenshotTest {
             onOpenSettings = {},
             onExport = {},
             onImport = {},
+            onCheckUpdates = {},
             zone = moscow,
         )
     }

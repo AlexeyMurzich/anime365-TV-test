@@ -45,3 +45,15 @@ fun createAnime365Api(
         .addConverterFactory(anime365Json.asConverterFactory("application/json".toMediaType()))
         .build()
         .create(Anime365Api::class.java)
+
+fun createGitHubApi(
+    baseUrl: String = GITHUB_API_URL,
+    client: OkHttpClient = createOkHttpClient(),
+): GitHubApi =
+    Retrofit
+        .Builder()
+        .baseUrl(baseUrl)
+        .client(client)
+        .addConverterFactory(anime365Json.asConverterFactory("application/json".toMediaType()))
+        .build()
+        .create(GitHubApi::class.java)

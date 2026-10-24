@@ -2,6 +2,7 @@ package io.github.arenoros.anime365.core.testing
 
 import android.net.Uri
 import io.github.arenoros.anime365.core.data.repository.AccountRepository
+import io.github.arenoros.anime365.core.data.repository.AppUpdate
 import io.github.arenoros.anime365.core.data.repository.ImportMode
 import io.github.arenoros.anime365.core.data.repository.LibraryFileSummary
 import io.github.arenoros.anime365.core.data.repository.LibraryRepository
@@ -9,6 +10,7 @@ import io.github.arenoros.anime365.core.data.repository.LibraryTransfer
 import io.github.arenoros.anime365.core.data.repository.Playback
 import io.github.arenoros.anime365.core.data.repository.SeriesRepository
 import io.github.arenoros.anime365.core.data.repository.TranslationRepository
+import io.github.arenoros.anime365.core.data.repository.UpdateRepository
 import io.github.arenoros.anime365.core.datastore.AppSettings
 import io.github.arenoros.anime365.core.datastore.SettingsStore
 import io.github.arenoros.anime365.core.model.Account
@@ -29,6 +31,7 @@ import io.github.arenoros.anime365.core.player.EpisodeDownloads
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import java.time.Instant
 
 class FakeSeriesRepository : SeriesRepository {
     val series = MutableStateFlow<Series?>(null)
@@ -177,6 +180,18 @@ class FakeLibraryTransfer : LibraryTransfer {
     }
 }
 
+class FakeUpdateRepository : UpdateRepository {
+    var result: Result<AppUpdate?> = Result.success(null)
+    var checks = 0
+
+    override suspend fun check(): Result<AppUpdate?> {
+        checks++
+        return result
+    }
+
+    override suspend fun checkDaily(): AppUpdate? = check().getOrNull()
+}
+
 class FakeSettingsStore : SettingsStore {
     override val libraryHintShown = MutableStateFlow(false)
     override val settings = MutableStateFlow(AppSettings())
@@ -187,6 +202,12 @@ class FakeSettingsStore : SettingsStore {
 
     override suspend fun updateSettings(transform: (AppSettings) -> AppSettings) {
         settings.value = transform(settings.value)
+    }
+
+    override val updateCheckedAt = MutableStateFlow<Instant?>(null)
+
+    override suspend fun setUpdateCheckedAt(instant: Instant) {
+        updateCheckedAt.value = instant
     }
 }
 

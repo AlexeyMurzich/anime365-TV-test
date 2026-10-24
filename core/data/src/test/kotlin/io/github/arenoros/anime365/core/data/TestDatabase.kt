@@ -53,6 +53,12 @@ class FakeSettingsStore : SettingsStore {
     override suspend fun updateSettings(transform: (AppSettings) -> AppSettings) {
         settings.value = transform(settings.value)
     }
+
+    override val updateCheckedAt = MutableStateFlow<Instant?>(null)
+
+    override suspend fun setUpdateCheckedAt(instant: Instant) {
+        updateCheckedAt.value = instant
+    }
 }
 
 /** 23.10.2026 15:00 по Москве — сезон «Осень 2026». */

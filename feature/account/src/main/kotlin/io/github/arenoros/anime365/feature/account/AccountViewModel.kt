@@ -5,10 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.arenoros.anime365.core.data.repository.AccountRepository
+import io.github.arenoros.anime365.core.data.repository.AppUpdate
 import io.github.arenoros.anime365.core.data.repository.ImportMode
 import io.github.arenoros.anime365.core.data.repository.LibraryFileSummary
 import io.github.arenoros.anime365.core.data.repository.LibraryTransfer
 import io.github.arenoros.anime365.core.data.repository.UnsupportedLibraryFileException
+import io.github.arenoros.anime365.core.data.repository.UpdateRepository
 import io.github.arenoros.anime365.core.model.Account
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -49,6 +51,17 @@ internal sealed interface TransferResult {
     data object NewerFile : TransferResult
 }
 
+/** Итог «Проверить обновления»: диалог или снекбар. */
+internal sealed interface UpdateCheck {
+    data class Available(
+        val update: AppUpdate,
+    ) : UpdateCheck
+
+    data object Latest : UpdateCheck
+
+    data object Failed : UpdateCheck
+}
+
 /** Профиль и Нужна Подписка: оба показывают аккаунт и перечитывают его с сайта. */
 @HiltViewModel
 internal class AccountViewModel
@@ -57,11 +70,14 @@ internal class AccountViewModel
         private val repository: AccountRepository,
         private val transfer: LibraryTransfer,
         private val clock: Clock,
+        private val updates: UpdateRepository,
     ) : ViewModel() {
         private val refreshing = MutableStateFlow(false)
         private val error = MutableStateFlow<Throwable?>(null)
         private val transferChannel = Channel<TransferResult>(Channel.BUFFERED)
         val transferResults: Flow<TransferResult> = transferChannel.receiveAsFlow()
+        private val updateChannel = Channel<UpdateCheck>(Channel.BUFFERED)
+        val updateChecks: Flow<UpdateCheck> = updateChannel.receiveAsFlow()
 
         val uiState: StateFlow<AccountUiState> =
             combine(repository.account, refreshing, error, ::AccountUiState)
@@ -110,6 +126,17 @@ internal class AccountViewModel
                         is UnsupportedLibraryFileException -> TransferResult.NewerFile
                         else -> TransferResult.ImportFailed
                     },
+                )
+            }
+        }
+
+        fun checkUpdates() {
+            viewModelScope.launch {
+                updateChannel.send(
+                    updates.check().fold(
+                        { it?.let(UpdateCheck::Available) ?: UpdateCheck.Latest },
+                        { UpdateCheck.Failed },
+                    ),
                 )
             }
         }

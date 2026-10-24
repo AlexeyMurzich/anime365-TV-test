@@ -5,7 +5,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.github.arenoros.anime365.core.network.Anime365Api
+import io.github.arenoros.anime365.core.network.GitHubApi
 import io.github.arenoros.anime365.core.network.createAnime365Api
+import io.github.arenoros.anime365.core.network.createGitHubApi
 import io.github.arenoros.anime365.core.network.createOkHttpClient
 import okhttp3.OkHttpClient
 import javax.inject.Singleton
@@ -20,4 +22,8 @@ internal object NetworkModule {
     @Provides
     @Singleton
     fun anime365Api(client: OkHttpClient): Anime365Api = createAnime365Api(client = client)
+
+    @Provides
+    @Singleton
+    fun gitHubApi(client: OkHttpClient): GitHubApi = createGitHubApi(client = client)
 }

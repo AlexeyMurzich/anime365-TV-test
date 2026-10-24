@@ -50,3 +50,5 @@ include(":feature:player")
 include(":feature:library")
 include(":feature:account")
 include(":feature:upload")
+
+include(":baselineprofile")

@@ -30,6 +30,6 @@ class SettingsScreenshotTest {
         settings: AppSettings,
         fontScale: Float = 1f,
     ) = compose.captureScreen(name, fontScale) {
-        SettingsScreen(settings, onUpdate = {}, onEnableNotifications = {}, onBack = {})
+        SettingsScreen(settings, onUpdate = {}, onEnableNotifications = {}, onBack = {}, crashReportsAvailable = true)
     }
 }

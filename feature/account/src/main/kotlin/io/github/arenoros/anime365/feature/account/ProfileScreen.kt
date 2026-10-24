@@ -44,6 +44,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.arenoros.anime365.core.data.repository.AppUpdate
 import io.github.arenoros.anime365.core.data.repository.ImportMode
 import io.github.arenoros.anime365.core.data.repository.LibraryFileSummary
 import io.github.arenoros.anime365.core.data.repository.SiteLinks
@@ -61,6 +62,7 @@ import java.time.format.DateTimeFormatter
 internal fun ProfileRoute(
     onLogin: () -> Unit,
     onOpenSettings: () -> Unit,
+    checksUpdates: Boolean,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -71,6 +73,17 @@ internal fun ProfileRoute(
             snackbar.showSnackbar(resources.message(result))
         }
     }
+    var update by remember { mutableStateOf<AppUpdate?>(null) }
+    LaunchedEffect(viewModel) {
+        viewModel.updateChecks.collect { check ->
+            when (check) {
+                is UpdateCheck.Available -> update = check.update
+                UpdateCheck.Latest -> snackbar.showSnackbar(resources.getString(R.string.feature_account_update_latest))
+                UpdateCheck.Failed -> snackbar.showSnackbar(resources.getString(R.string.feature_account_update_failed))
+            }
+        }
+    }
+    update?.let { UpdateDialog(it, onDismiss = { update = null }) }
     val exportFile =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(LIBRARY_FILE_TYPE)) { uri ->
             uri?.let(viewModel::export)
@@ -95,6 +108,7 @@ internal fun ProfileRoute(
         onExport = { exportFile.launch(viewModel.exportFileName()) },
         // Не все файловые менеджеры знают тип .json.
         onImport = { openFile.launch(arrayOf(LIBRARY_FILE_TYPE, "application/octet-stream")) },
+        onCheckUpdates = viewModel::checkUpdates.takeIf { checksUpdates },
         snackbar = snackbar,
     )
 }
@@ -140,7 +154,10 @@ private fun Resources.summary(
     }
 }
 
-/** Пункты меню из docs/screens.md появляются вместе со своими фичами: Мои публикации — с Публикацией. */
+/**
+ * Пункты меню из docs/screens.md появляются вместе со своими фичами: Мои публикации — с Публикацией.
+ * [onCheckUpdates] — `null` в сборках, которые не обновляются с GitHub (dev).
+ */
 @Composable
 internal fun ProfileScreen(
     account: Account?,
@@ -151,6 +168,7 @@ internal fun ProfileScreen(
     onExport: () -> Unit,
     onImport: () -> Unit,
     modifier: Modifier = Modifier,
+    onCheckUpdates: (() -> Unit)? = null,
     snackbar: SnackbarHostState = remember { SnackbarHostState() },
     zone: ZoneId = ZoneId.systemDefault(),
 ) {
@@ -183,6 +201,9 @@ internal fun ProfileScreen(
                 MenuRow(KadrIcons.Settings, stringResource(R.string.feature_account_settings), onOpenSettings)
                 MenuRow(KadrIcons.Upload, stringResource(R.string.feature_account_export), onExport)
                 MenuRow(KadrIcons.Download, stringResource(R.string.feature_account_import), onImport)
+                onCheckUpdates?.let {
+                    MenuRow(KadrIcons.Update, stringResource(R.string.feature_account_check_updates), it)
+                }
             }
             Text(
                 stringResource(R.string.feature_account_local_library_hint),
