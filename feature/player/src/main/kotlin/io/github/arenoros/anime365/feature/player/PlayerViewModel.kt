@@ -86,6 +86,9 @@ internal data class PlayerUiState(
 ) {
     val nextEpisode: Episode? get() = episode?.let { series?.details?.episodeAfter(it.id) }
     val previousEpisode: Episode? get() = episode?.let { series?.details?.episodeBefore(it.id) }
+
+    /** Видео есть или вот-вот будет — Плеер сворачивается в окно; смотреть нечего — закрывается. */
+    val canMinimize: Boolean get() = status == PlayerStatus.Playing || status == PlayerStatus.Loading
 }
 
 private const val SAVE_INTERVAL_MS = 10_000L

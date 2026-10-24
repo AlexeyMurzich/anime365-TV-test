@@ -9,12 +9,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -27,14 +30,20 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.keepScreenOn
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
@@ -59,6 +68,9 @@ import io.github.arenoros.anime365.core.designsystem.R as DesignR
 
 internal const val VIDEO_ASPECT_RATIO = 16f / 9f
 
+/** Управление гаснет вчетверо быстрее, чем Плеер едет в окно. */
+private const val OVERLAY_FADE_SPEED = 4f
+
 @Composable
 internal fun PlayerRoute(
     key: PlayerKey,
@@ -67,6 +79,7 @@ internal fun PlayerRoute(
     onSubscription: () -> Unit,
     onMinimize: () -> Unit,
     onClose: () -> Unit,
+    miniPlayerBounds: () -> Rect?,
     viewModel: PlayerViewModel =
         hiltViewModel<PlayerViewModel, PlayerViewModel.Factory>(creationCallback = { it.create(key) }),
 ) {
@@ -88,20 +101,17 @@ internal fun PlayerRoute(
         viewModel.retryIfBlocked()
         onPauseOrDispose { viewModel.saveNow() }
     }
-    // Видео есть или вот-вот будет — «Назад» сворачивает Плеер в окно; смотреть нечего — закрывает.
-    val leave =
-        if (state.status == PlayerStatus.Playing ||
-            state.status == PlayerStatus.Loading
-        ) {
-            onMinimize
-        } else {
-            onClose
-        }
+    val minimize by rememberUpdatedState(onMinimize)
+    val collapse = remember { PlayerCollapse(miniPlayerBounds) { minimize() } }
+    val scope = rememberCoroutineScope()
+    // «Назад» сворачивает Плеер в окно — тем же движением, что и свайп вниз; смотреть нечего — закрывает.
+    val leave: () -> Unit = if (state.canMinimize) ({ scope.launch { collapse.collapse() } }) else onClose
     BackHandler(onBack = leave)
     PlayerScreen(
         state = state,
         player = viewModel.videoPlayer,
         snackbars = snackbars,
+        collapse = collapse,
         actions =
             PlayerActions(
                 onBack = leave,
@@ -138,6 +148,7 @@ internal class PlayerActions(
 /**
  * Портрет: видео 16:9 сверху, под ним — что играет, «Перевод», следующая серия и сетка Эпизодов.
  * Ландшафт — во весь экран без системных панелей. В «картинке в картинке» — только видео.
+ * Свайп вниз по видео в портрете сворачивает Плеер в окно ([collapse]).
  * [player] — `null` в скриншот-тестах: видео там не нарисовать.
  */
 @OptIn(UnstableApi::class)
@@ -146,6 +157,7 @@ internal fun PlayerScreen(
     state: PlayerUiState,
     player: VideoPlayer?,
     snackbars: SnackbarHostState,
+    collapse: PlayerCollapse?,
     actions: PlayerActions,
     modifier: Modifier = Modifier,
 ) {
@@ -154,13 +166,22 @@ internal fun PlayerScreen(
     val playing = !rememberPlayPauseButtonState(player?.player).showPlay
     val toggleFullscreen = rememberOrientationToggle(landscape)
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
-    Box(modifier.fillMaxSize().background(Color.Black).then(if (playing) Modifier.keepScreenOn() else Modifier)) {
+    // Сворачивается — фон гаснет, под Плеером видно приложение.
+    val shown = { 1f - (collapse?.fraction ?: 0f) }
+    Box(
+        modifier
+            .fillMaxSize()
+            .drawBehind { drawRect(Color.Black, alpha = shown()) }
+            .then(if (playing) Modifier.keepScreenOn() else Modifier),
+    ) {
         when {
             inPictureInPicture -> {
+                SideEffect { collapse?.videoBounds = null }
                 if (player != null) VideoSurface(player, Modifier.fillMaxSize())
             }
 
             landscape -> {
+                SideEffect { collapse?.videoBounds = null }
                 HideSystemBars()
                 Video(
                     state,
@@ -174,23 +195,7 @@ internal fun PlayerScreen(
             }
 
             else -> {
-                Column(Modifier.fillMaxSize().background(KadrTheme.palette.background)) {
-                    Video(
-                        state,
-                        player,
-                        fullscreen = false,
-                        actions,
-                        toggleFullscreen,
-                        { settingsOpen = true },
-                        Modifier
-                            .background(
-                                Color.Black,
-                            ).statusBarsPadding()
-                            .fillMaxWidth()
-                            .aspectRatio(VIDEO_ASPECT_RATIO),
-                    )
-                    PortraitDetails(state, actions)
-                }
+                PortraitPlayer(state, player, collapse, actions, toggleFullscreen) { settingsOpen = true }
             }
         }
         SnackbarHost(snackbars, Modifier.align(Alignment.BottomCenter))
@@ -206,6 +211,49 @@ internal fun PlayerScreen(
     }
 }
 
+/** Видео сверху, под ним — что играет; сворачиваясь, видео едет в окно, остальное гаснет. */
+@Composable
+private fun PortraitPlayer(
+    state: PlayerUiState,
+    player: VideoPlayer?,
+    collapse: PlayerCollapse?,
+    actions: PlayerActions,
+    onToggleFullscreen: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    val shown = { 1f - (collapse?.fraction ?: 0f) }
+    val background = KadrTheme.palette.background
+    Column(
+        Modifier
+            .fillMaxSize()
+            .graphicsLayer { collapse?.transform(this) }
+            .drawBehind { drawRect(background, alpha = shown()) },
+    ) {
+        // Чёрная полоса под статус-баром гаснет вместе с остальным: в окно уезжает только видео.
+        Spacer(
+            Modifier
+                .fillMaxWidth()
+                .windowInsetsTopHeight(WindowInsets.statusBars)
+                .drawBehind { drawRect(Color.Black, alpha = shown()) },
+        )
+        Video(
+            state,
+            player,
+            fullscreen = false,
+            actions,
+            onToggleFullscreen,
+            onOpenSettings,
+            Modifier
+                .background(Color.Black)
+                .fillMaxWidth()
+                .aspectRatio(VIDEO_ASPECT_RATIO)
+                .then(collapse?.let { Modifier.collapsibleVideo(it, state.canMinimize) } ?: Modifier),
+            overlayAlpha = { (1f - (collapse?.fraction ?: 0f) * OVERLAY_FADE_SPEED).coerceAtLeast(0f) },
+        )
+        PortraitDetails(state, actions, Modifier.graphicsLayer { alpha = shown() })
+    }
+}
+
 @Suppress("LongParameterList")
 @Composable
 private fun Video(
@@ -216,62 +264,66 @@ private fun Video(
     onToggleFullscreen: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier,
+    overlayAlpha: () -> Float = { 1f },
 ) {
     Box(modifier) {
         if (player != null) VideoSurface(player, Modifier.fillMaxSize())
-        when (val status = state.status) {
-            PlayerStatus.Loading -> {
-                CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
-            }
+        // Управление и сообщения гаснут первыми, когда Плеер сворачивается.
+        Box(Modifier.matchParentSize().graphicsLayer { alpha = overlayAlpha() }) {
+            when (val status = state.status) {
+                PlayerStatus.Loading -> {
+                    CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
+                }
 
-            // Эпизод доигран и идёт отсчёт: вместо управления — только карточка следующей серии.
-            PlayerStatus.Playing -> {
-                if (state.nextCountdown == null) {
-                    PlayerControls(
-                        state = state,
-                        player = player?.player,
-                        fullscreen = fullscreen,
-                        onBack = actions.onBack,
-                        onChooseTranslation = { state.episode?.let { actions.onChooseTranslation(it.id) } },
-                        onOpenSettings = onOpenSettings,
-                        onToggleFullscreen = onToggleFullscreen,
-                        onPlayPrevious = actions.onPlayPrevious,
-                        onPlayNext = actions.onPlayNext,
+                // Эпизод доигран и идёт отсчёт: вместо управления — только карточка следующей серии.
+                PlayerStatus.Playing -> {
+                    if (state.nextCountdown == null) {
+                        PlayerControls(
+                            state = state,
+                            player = player?.player,
+                            fullscreen = fullscreen,
+                            onBack = actions.onBack,
+                            onChooseTranslation = { state.episode?.let { actions.onChooseTranslation(it.id) } },
+                            onOpenSettings = onOpenSettings,
+                            onToggleFullscreen = onToggleFullscreen,
+                            onPlayPrevious = actions.onPlayPrevious,
+                            onPlayNext = actions.onPlayNext,
+                        )
+                    }
+                }
+
+                PlayerStatus.NeedsLogin -> {
+                    Message(
+                        stringResource(R.string.feature_player_needs_login),
+                        stringResource(R.string.feature_player_log_in),
+                        actions.onLogin,
+                    )
+                }
+
+                PlayerStatus.NeedsSubscription -> {
+                    Message(
+                        stringResource(R.string.feature_player_needs_subscription),
+                        stringResource(R.string.feature_player_more),
+                        actions.onSubscription,
+                    )
+                }
+
+                is PlayerStatus.Failed -> {
+                    Message(
+                        errorMessage(status.error),
+                        stringResource(DesignR.string.core_designsystem_retry),
+                        actions.onRetry,
                     )
                 }
             }
-
-            PlayerStatus.NeedsLogin -> {
-                Message(
-                    stringResource(R.string.feature_player_needs_login),
-                    stringResource(R.string.feature_player_log_in),
-                    actions.onLogin,
+            state.nextCountdown?.let { seconds ->
+                NextEpisodeCard(
+                    seconds = seconds,
+                    onPlayNow = actions.onPlayNext,
+                    onCancel = actions.onCancelAutoplay,
+                    modifier = Modifier.align(Alignment.Center).padding(KadrSpacing.Space4),
                 )
             }
-
-            PlayerStatus.NeedsSubscription -> {
-                Message(
-                    stringResource(R.string.feature_player_needs_subscription),
-                    stringResource(R.string.feature_player_more),
-                    actions.onSubscription,
-                )
-            }
-
-            is PlayerStatus.Failed -> {
-                Message(
-                    errorMessage(status.error),
-                    stringResource(DesignR.string.core_designsystem_retry),
-                    actions.onRetry,
-                )
-            }
-        }
-        state.nextCountdown?.let { seconds ->
-            NextEpisodeCard(
-                seconds = seconds,
-                onPlayNow = actions.onPlayNext,
-                onCancel = actions.onCancelAutoplay,
-                modifier = Modifier.align(Alignment.Center).padding(KadrSpacing.Space4),
-            )
         }
     }
 }
@@ -297,10 +349,11 @@ private fun BoxScope.Message(
 private fun PortraitDetails(
     state: PlayerUiState,
     actions: PlayerActions,
+    modifier: Modifier,
 ) {
     // Табов на Плеере нет: отступ от системной навигации — сам.
     Column(
-        Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(vertical = KadrSpacing.Space4),
+        modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(vertical = KadrSpacing.Space4),
         verticalArrangement = Arrangement.spacedBy(KadrSpacing.Space3),
     ) {
         Column(Modifier.padding(horizontal = KadrSpacing.Space4)) {

@@ -1,9 +1,13 @@
 package io.github.arenoros.anime365.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -16,8 +20,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -29,6 +39,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import io.github.arenoros.anime365.R
@@ -46,6 +57,7 @@ import io.github.arenoros.anime365.feature.library.navigation.libraryEntries
 import io.github.arenoros.anime365.feature.library.notifications.EpisodeLink
 import io.github.arenoros.anime365.feature.player.AutoPictureInPicture
 import io.github.arenoros.anime365.feature.player.MiniPlayer
+import io.github.arenoros.anime365.feature.player.miniPlayerBounds
 import io.github.arenoros.anime365.feature.player.navigation.PlayerKey
 import io.github.arenoros.anime365.feature.player.navigation.playerEntries
 import io.github.arenoros.anime365.feature.player.rememberIsInPictureInPicture
@@ -69,7 +81,6 @@ internal fun Anime365App(
     val newEpisodeCount by viewModel.newEpisodeCount.collectAsStateWithLifecycle()
 
     val player = rememberPlayerHost()
-    val inPictureInPicture = rememberIsInPictureInPicture()
 
     LaunchedEffect(link) {
         if (link == null) return@LaunchedEffect
@@ -96,36 +107,56 @@ internal fun Anime365App(
         current = TopLevelDestination.Home
     }
 
-    // Развёрнутый Плеер скрывает табы (docs/screens.md), «картинка в картинке» — тоже.
-    Scaffold(
-        modifier = modifier,
-        bottomBar = {
-            if (!player.expanded && !inPictureInPicture) {
-                AppNavigationBar(
-                    current = current,
-                    newEpisodeCount = newEpisodeCount,
-                    onSelect = { destination ->
-                        // Повторное нажатие на активный таб возвращает к его корню.
-                        if (destination == current) {
-                            while (backStack.size > 1) backStack.removeLastOrNull()
-                        } else {
-                            current = destination
-                        }
-                    },
+    Box(modifier) {
+        // Под развёрнутым Плеером приложение остаётся на месте: свайп вниз сворачивает Плеер и
+        // открывает его. Пока Плеер развёрнут, TalkBack не видит того, что под ним.
+        Scaffold(
+            modifier = if (player.expanded) Modifier.clearAndSetSemantics {} else Modifier,
+            bottomBar = {
+                if (!rememberIsInPictureInPicture()) {
+                    AppNavigationBar(
+                        current = current,
+                        newEpisodeCount = newEpisodeCount,
+                        onSelect = { destination ->
+                            // Повторное нажатие на активный таб возвращает к его корню.
+                            if (destination == current) {
+                                while (backStack.size > 1) backStack.removeLastOrNull()
+                            } else {
+                                current = destination
+                            }
+                        },
+                    )
+                }
+            },
+            // Верхний отступ у каждого экрана свой: зелёная шапка заходит под статус-бар.
+            contentWindowInsets = WindowInsets(0),
+        ) { padding ->
+            Box {
+                NavDisplay(
+                    entries = entries.getValue(current),
+                    modifier = Modifier.padding(padding).consumeWindowInsets(padding),
+                    sceneStrategies = sceneStrategies,
+                    onBack = { backStack.removeLastOrNull() },
                 )
+                PlayerWindow(player, viewModel.videoPlayer, Modifier.padding(padding))
             }
-        },
-        // Верхний отступ у каждого экрана свой: зелёная шапка заходит под статус-бар.
-        contentWindowInsets = WindowInsets(0),
-    ) { padding ->
-        Box {
-            NavDisplay(
-                entries = if (player.expanded) entries.getValue(current) + playerEntries else entries.getValue(current),
-                modifier = Modifier.padding(padding).consumeWindowInsets(padding),
-                sceneStrategies = sceneStrategies,
-                onBack = { if (player.expanded) player.back() else backStack.removeLastOrNull() },
-            )
-            PlayerWindow(player, viewModel.videoPlayer, Modifier.padding(padding))
+        }
+        PlayerLayer(player, playerEntries, sceneStrategies)
+    }
+}
+
+/** Развёрнутый Плеер и то, что открыто поверх него, — во весь экран над табами (docs/screens.md). */
+@Composable
+private fun PlayerLayer(
+    player: PlayerHost,
+    entries: List<NavEntry<NavKey>>,
+    sceneStrategies: List<SceneStrategy<NavKey>>,
+) {
+    // Свёрнутый Плеер уже доехал до окна анимацией: слой исчезает сразу.
+    AnimatedVisibility(player.expanded && entries.isNotEmpty(), enter = fadeIn(), exit = ExitTransition.None) {
+        // Касания не проходят к приложению, даже где Плеер прозрачен посреди сворачивания.
+        Box(Modifier.fillMaxSize().pointerInput(Unit) {}) {
+            NavDisplay(entries = entries, sceneStrategies = sceneStrategies, onBack = player::back)
         }
     }
 }
@@ -141,6 +172,9 @@ private class PlayerHost(
 ) {
     var minimized by minimized
         private set
+
+    /** Где появится окно: туда Плеер сворачивается анимацией. */
+    var miniWindow: Rect? = null
 
     val expanded: Boolean get() = stack.isNotEmpty() && !minimized
 
@@ -186,6 +220,16 @@ private fun PlayerWindow(
 ) {
     val playing by videoPlayer.playing.collectAsStateWithLifecycle()
     AutoPictureInPicture(playing = player.stack.isNotEmpty() && playing)
+    val density = LocalDensity.current
+    Box(
+        modifier.fillMaxSize().onGloballyPositioned {
+            player.miniWindow =
+                miniPlayerBounds(
+                    it.boundsInRoot(),
+                    density,
+                )
+        },
+    )
     if (player.stack.isNotEmpty() && player.minimized) {
         MiniPlayer(videoPlayer, onExpand = player::expand, onClose = player::close, modifier = modifier)
     }
@@ -292,6 +336,7 @@ private fun entryProvider(
             onSubscription = subscription,
             onMinimize = player::minimize,
             onClose = player::close,
+            miniPlayerBounds = { player.miniWindow },
         )
         libraryEntries(
             onOpenSeries = { backStack.add(SeriesKey(it)) },

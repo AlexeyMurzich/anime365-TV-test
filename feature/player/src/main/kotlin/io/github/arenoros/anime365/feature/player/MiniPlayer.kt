@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.keepScreenOn
@@ -39,6 +40,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.round
@@ -78,7 +81,7 @@ fun MiniPlayer(
     }
     val playPause = rememberPlayPauseButtonState(player?.player)
     BoxWithConstraints(modifier.fillMaxSize().statusBarsPadding().padding(KadrSpacing.Space3)) {
-        val width = min(maxWidth * WIDTH_FRACTION, MaxWidth)
+        val width = windowWidth(maxWidth)
         val height = width / VIDEO_ASPECT_RATIO
         val bounds = with(LocalDensity.current) { Offset((maxWidth - width).toPx(), (maxHeight - height).toPx()) }
         var atEnd by rememberSaveable { mutableStateOf(true) }
@@ -150,6 +153,23 @@ private fun BoxScope.WindowButtons(
         Modifier.align(Alignment.BottomStart),
     )
 }
+
+/**
+ * Где окно появляется после сворачивания — внизу справа в [area] (координаты корня): туда
+ * сворачивается развёрнутый Плеер.
+ */
+fun miniPlayerBounds(
+    area: Rect,
+    density: Density,
+): Rect =
+    with(density) {
+        val margin = KadrSpacing.Space3.toPx()
+        val width = windowWidth((area.width - 2 * margin).toDp()).toPx()
+        val height = width / VIDEO_ASPECT_RATIO
+        Rect(area.right - margin - width, area.bottom - margin - height, area.right - margin, area.bottom - margin)
+    }
+
+private fun windowWidth(available: Dp): Dp = min(available * WIDTH_FRACTION, MaxWidth)
 
 @Composable
 private fun MiniButton(

@@ -1,5 +1,6 @@
 package io.github.arenoros.anime365.feature.player.navigation
 
+import androidx.compose.ui.geometry.Rect
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import io.github.arenoros.anime365.feature.player.PlayerRoute
@@ -18,7 +19,8 @@ data class PlayerKey(
 
 /**
  * [onChooseTranslation] — Выбор Перевода для Эпизода этого же аниме поверх Плеера.
- * [onMinimize] — свернуть в окно поверх приложения ([io.github.arenoros.anime365.feature.player.MiniPlayer]).
+ * [onMinimize] — свернуть в окно поверх приложения ([io.github.arenoros.anime365.feature.player.MiniPlayer]);
+ * [miniPlayerBounds] — где окно появится, туда Плеер сворачивается анимацией.
  */
 fun EntryProviderScope<NavKey>.playerEntries(
     onChooseTranslation: (seriesId: Int, episodeId: Int) -> Unit,
@@ -26,6 +28,7 @@ fun EntryProviderScope<NavKey>.playerEntries(
     onSubscription: () -> Unit,
     onMinimize: () -> Unit,
     onClose: () -> Unit,
+    miniPlayerBounds: () -> Rect?,
 ) {
     entry<PlayerKey> { key ->
         PlayerRoute(
@@ -35,6 +38,7 @@ fun EntryProviderScope<NavKey>.playerEntries(
             onSubscription = onSubscription,
             onMinimize = onMinimize,
             onClose = onClose,
+            miniPlayerBounds = miniPlayerBounds,
         )
     }
 }

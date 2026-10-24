@@ -84,6 +84,7 @@ class PlayerScreenScreenshotTest {
             state = state,
             player = null,
             snackbars = SnackbarHostState(),
+            collapse = null,
             actions = PlayerActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}),
         )
     }
