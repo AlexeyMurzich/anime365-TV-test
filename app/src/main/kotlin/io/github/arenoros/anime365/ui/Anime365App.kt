@@ -1,12 +1,15 @@
 package io.github.arenoros.anime365.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,7 +21,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
@@ -30,6 +35,7 @@ import io.github.arenoros.anime365.R
 import io.github.arenoros.anime365.core.designsystem.component.BottomSheetSceneStrategy
 import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationBar
 import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationBarItem
+import io.github.arenoros.anime365.core.player.VideoPlayer
 import io.github.arenoros.anime365.feature.account.navigation.LoginKey
 import io.github.arenoros.anime365.feature.account.navigation.SettingsKey
 import io.github.arenoros.anime365.feature.account.navigation.SubscriptionKey
@@ -38,8 +44,12 @@ import io.github.arenoros.anime365.feature.catalog.navigation.CatalogKey
 import io.github.arenoros.anime365.feature.catalog.navigation.catalogEntries
 import io.github.arenoros.anime365.feature.library.navigation.libraryEntries
 import io.github.arenoros.anime365.feature.library.notifications.EpisodeLink
+import io.github.arenoros.anime365.feature.player.AutoPictureInPicture
+import io.github.arenoros.anime365.feature.player.MiniPlayer
 import io.github.arenoros.anime365.feature.player.navigation.PlayerKey
 import io.github.arenoros.anime365.feature.player.navigation.playerEntries
+import io.github.arenoros.anime365.feature.player.rememberIsInPictureInPicture
+import io.github.arenoros.anime365.feature.series.navigation.PickerPurpose
 import io.github.arenoros.anime365.feature.series.navigation.SeriesKey
 import io.github.arenoros.anime365.feature.series.navigation.TranslationsKey
 import io.github.arenoros.anime365.feature.series.navigation.seriesEntries
@@ -58,9 +68,12 @@ internal fun Anime365App(
     val backStack = backStacks.getValue(current)
     val newEpisodeCount by viewModel.newEpisodeCount.collectAsStateWithLifecycle()
 
+    val player = rememberPlayerHost()
+    val inPictureInPicture = rememberIsInPictureInPicture()
+
     LaunchedEffect(link) {
         if (link == null) return@LaunchedEffect
-        openLink(link, backStacks.getValue(TopLevelDestination.Library), viewModel)
+        openLink(link, backStacks.getValue(TopLevelDestination.Library), viewModel, player)
         current = TopLevelDestination.Library
         onLinkHandled()
     }
@@ -71,29 +84,23 @@ internal fun Anime365App(
             rememberViewModelStoreNavEntryDecorator(),
         )
     // Записи всех табов живут всё время: так переключение таба не сбрасывает ни прокрутку, ни ViewModel.
-    // Ключ записи — с именем таба: одно и то же Аниме, открытое в двух табах, — два разных экрана.
     val entries =
         TopLevelDestination.entries.associateWith { destination ->
-            val tabStack = backStacks.getValue(destination)
-            val provider = remember(tabStack) { entryProvider(tabStack) }
-            rememberDecoratedNavEntries(tabStack, decorators) { key ->
-                val entry = provider(key)
-                NavEntry(key, "${destination.name}/${entry.contentKey}", entry.metadata) { entry.Content() }
-            }
+            rememberEntries(backStacks.getValue(destination), destination.name, decorators, player)
         }
+    val playerEntries = rememberEntries(player.stack, "Player", decorators, player)
     val sceneStrategies = remember { listOf(BottomSheetSceneStrategy<NavKey>(), SinglePaneSceneStrategy()) }
 
     // «Назад» с корня любого таба, кроме Главной, ведёт на Главную, а не закрывает приложение.
-    BackHandler(enabled = current != TopLevelDestination.Home && backStack.size == 1) {
+    BackHandler(enabled = !player.expanded && current != TopLevelDestination.Home && backStack.size == 1) {
         current = TopLevelDestination.Home
     }
 
-    // Плеер скрывает табы (docs/screens.md); лист Выбора Перевода поверх него — тоже без табов.
-    val playerOnTop = backStack.lastOrNull { it !is TranslationsKey } is PlayerKey
+    // Развёрнутый Плеер скрывает табы (docs/screens.md), «картинка в картинке» — тоже.
     Scaffold(
         modifier = modifier,
         bottomBar = {
-            if (!playerOnTop) {
+            if (!player.expanded && !inPictureInPicture) {
                 AppNavigationBar(
                     current = current,
                     newEpisodeCount = newEpisodeCount,
@@ -111,12 +118,94 @@ internal fun Anime365App(
         // Верхний отступ у каждого экрана свой: зелёная шапка заходит под статус-бар.
         contentWindowInsets = WindowInsets(0),
     ) { padding ->
-        NavDisplay(
-            entries = entries.getValue(current),
-            modifier = Modifier.padding(padding).consumeWindowInsets(padding),
-            sceneStrategies = sceneStrategies,
-            onBack = { backStack.removeLastOrNull() },
-        )
+        Box {
+            NavDisplay(
+                entries = if (player.expanded) entries.getValue(current) + playerEntries else entries.getValue(current),
+                modifier = Modifier.padding(padding).consumeWindowInsets(padding),
+                sceneStrategies = sceneStrategies,
+                onBack = { if (player.expanded) player.back() else backStack.removeLastOrNull() },
+            )
+            PlayerWindow(player, viewModel.videoPlayer, Modifier.padding(padding))
+        }
+    }
+}
+
+/**
+ * Плеер — в своём стеке поверх табов (ADR 0011): развёрнут, свёрнут в окно или закрыт. Над ним в
+ * том же стеке — Выбор Перевода, Вход и Нужна Подписка, открытые из Плеера.
+ */
+@Stable
+private class PlayerHost(
+    val stack: NavBackStack<NavKey>,
+    minimized: MutableState<Boolean>,
+) {
+    var minimized by minimized
+        private set
+
+    val expanded: Boolean get() = stack.isNotEmpty() && !minimized
+
+    /** Новый Плеер заменяет прежний, развёрнутый или свёрнутый. */
+    fun open(key: PlayerKey) {
+        stack.clear()
+        stack.add(key)
+        minimized = false
+    }
+
+    fun minimize() {
+        minimized = true
+    }
+
+    fun expand() {
+        minimized = false
+    }
+
+    fun close() {
+        stack.clear()
+        minimized = false
+    }
+
+    /** «Назад» на развёрнутом: закрыть то, что открыто поверх Плеера, или свернуть его. */
+    fun back() {
+        if (stack.size > 1) stack.removeLastOrNull() else minimize()
+    }
+}
+
+@Composable
+private fun rememberPlayerHost(): PlayerHost {
+    val stack = rememberNavBackStack()
+    val minimized = rememberSaveable { mutableStateOf(false) }
+    return remember(stack, minimized) { PlayerHost(stack, minimized) }
+}
+
+/** Свёрнутый Плеер — окном поверх приложения; играет видео — «картинка в картинке» при выходе. */
+@Composable
+private fun PlayerWindow(
+    player: PlayerHost,
+    videoPlayer: VideoPlayer,
+    modifier: Modifier,
+) {
+    val playing by videoPlayer.playing.collectAsStateWithLifecycle()
+    AutoPictureInPicture(playing = player.stack.isNotEmpty() && playing)
+    if (player.stack.isNotEmpty() && player.minimized) {
+        MiniPlayer(videoPlayer, onExpand = player::expand, onClose = player::close, modifier = modifier)
+    }
+}
+
+/**
+ * Записи одного стека. Ключ записи — с именем стека: одно и то же Аниме, открытое в двух табах, —
+ * два разных экрана.
+ */
+@Composable
+private fun rememberEntries(
+    stack: NavBackStack<NavKey>,
+    name: String,
+    decorators: List<NavEntryDecorator<NavKey>>,
+    player: PlayerHost,
+): List<NavEntry<NavKey>> {
+    val provider = remember(stack) { entryProvider(stack, player) }
+    return rememberDecoratedNavEntries(stack, decorators) { key ->
+        val entry = provider(key)
+        NavEntry(key, "$name/${entry.contentKey}", entry.metadata) { entry.Content() }
     }
 }
 
@@ -147,28 +236,32 @@ private suspend fun openLink(
     link: EpisodeLink,
     stack: MutableList<NavKey>,
     viewModel: AppViewModel,
+    player: PlayerHost,
 ) {
     while (stack.size > 1) stack.removeLastOrNull()
     stack.add(SeriesKey(link.seriesId))
     val translationId = viewModel.rememberedTranslationId(link.seriesId, link.episodeId)
-    stack.add(
-        if (translationId != null) {
-            PlayerKey(link.seriesId, link.episodeId, translationId)
-        } else {
-            TranslationsKey(link.seriesId, link.episodeId)
-        },
-    )
+    if (translationId != null) {
+        player.open(PlayerKey(link.seriesId, link.episodeId, translationId))
+    } else {
+        stack.add(TranslationsKey(link.seriesId, link.episodeId))
+    }
 }
 
-/** Экраны всех фич. Переходы кладут ключ в стек того таба, где открыт экран (ADR 0009). */
-private fun entryProvider(backStack: MutableList<NavKey>): (NavKey) -> NavEntry<NavKey> {
+/**
+ * Экраны всех фич. Переходы кладут ключ в стек того таба или Плеера, где открыт экран (ADR 0009,
+ * ADR 0011).
+ */
+private fun entryProvider(
+    backStack: MutableList<NavKey>,
+    player: PlayerHost,
+): (NavKey) -> NavEntry<NavKey> {
     val openEpisode: (Int, Int) -> Unit = { seriesId, episodeId -> backStack.add(TranslationsKey(seriesId, episodeId)) }
     // Плеер открывается вместо листа Выбора Перевода и вместо прежнего Плеера: «Назад» ведёт туда,
     // откуда начали смотреть, а не к прошлому Переводу.
     val play: (Int, Int, Int) -> Unit = { seriesId, episodeId, translationId ->
         if (backStack.lastOrNull() is TranslationsKey) backStack.removeLastOrNull()
-        if (backStack.lastOrNull() is PlayerKey) backStack.removeLastOrNull()
-        backStack.add(PlayerKey(seriesId, episodeId, translationId))
+        player.open(PlayerKey(seriesId, episodeId, translationId))
     }
     val login: () -> Unit = { backStack.add(LoginKey) }
     val subscription: () -> Unit = { backStack.add(SubscriptionKey) }
@@ -184,6 +277,10 @@ private fun entryProvider(backStack: MutableList<NavKey>): (NavKey) -> NavEntry<
         seriesEntries(
             onOpenGenre = { backStack.add(CatalogKey(genreId = it)) },
             onOpenEpisode = openEpisode,
+            onDownloadEpisode = { seriesId, episodeId, following ->
+                val purpose = if (following) PickerPurpose.DownloadFollowing else PickerPurpose.DownloadEpisode
+                backStack.add(TranslationsKey(seriesId, episodeId, purpose))
+            },
             onPlay = play,
             onLogin = login,
             onSubscription = subscription,
@@ -193,7 +290,8 @@ private fun entryProvider(backStack: MutableList<NavKey>): (NavKey) -> NavEntry<
             onChooseTranslation = openEpisode,
             onLogin = login,
             onSubscription = subscription,
-            onBack = back,
+            onMinimize = player::minimize,
+            onClose = player::close,
         )
         libraryEntries(
             onOpenSeries = { backStack.add(SeriesKey(it)) },

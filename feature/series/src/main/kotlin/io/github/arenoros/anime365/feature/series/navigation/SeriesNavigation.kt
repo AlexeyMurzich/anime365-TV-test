@@ -12,20 +12,25 @@ data class SeriesKey(
     val id: Int,
 ) : NavKey
 
+/** Что делает касание Перевода: смотреть или скачать эту серию, или эту и следующие той же Командой. */
+enum class PickerPurpose { Watch, DownloadEpisode, DownloadFollowing }
+
 /** Выбор Перевода — нижний лист поверх экрана Аниме или Плеера (docs/screens.md). */
 @Serializable
 data class TranslationsKey(
     val seriesId: Int,
     val episodeId: Int,
+    val purpose: PickerPurpose = PickerPurpose.Watch,
 ) : NavKey
 
 /**
- * [onOpenEpisode] — Выбор Перевода для Эпизода, [onPlay] — Плеер сразу. [onLogin] и [onSubscription]
- * ведут туда, где без входа и Подписки смотреть нельзя.
+ * [onOpenEpisode] — Выбор Перевода для Эпизода, [onPlay] — Плеер сразу, [onDownloadEpisode] — Выбор
+ * Перевода для Скачивания. [onLogin] и [onSubscription] ведут туда, где без входа и Подписки смотреть нельзя.
  */
 fun EntryProviderScope<NavKey>.seriesEntries(
     onOpenGenre: (genreId: Int) -> Unit,
     onOpenEpisode: (seriesId: Int, episodeId: Int) -> Unit,
+    onDownloadEpisode: (seriesId: Int, episodeId: Int, following: Boolean) -> Unit,
     onPlay: (seriesId: Int, episodeId: Int, translationId: Int) -> Unit,
     onLogin: () -> Unit,
     onSubscription: () -> Unit,
@@ -36,6 +41,7 @@ fun EntryProviderScope<NavKey>.seriesEntries(
             seriesId = key.id,
             onOpenGenre = onOpenGenre,
             onOpenEpisode = { onOpenEpisode(key.id, it) },
+            onDownloadEpisode = { episodeId, following -> onDownloadEpisode(key.id, episodeId, following) },
             onPlay = { episodeId, translationId -> onPlay(key.id, episodeId, translationId) },
             onBack = onBack,
         )
@@ -44,9 +50,11 @@ fun EntryProviderScope<NavKey>.seriesEntries(
         TranslationPickerRoute(
             seriesId = key.seriesId,
             episodeId = key.episodeId,
+            purpose = key.purpose,
             onPlay = { onPlay(key.seriesId, key.episodeId, it) },
             onLogin = onLogin,
             onSubscription = onSubscription,
+            onClose = onBack,
         )
     }
 }

@@ -34,4 +34,10 @@
     <string name="feature_series_remove_from_list">Убрать из списка</string>
     <string name="feature_series_mark_watched">Отметить просмотренной</string>
     <string name="feature_series_unmark_watched">Снять отметку «просмотрена»</string>
+    <string name="feature_series_download">Скачать</string>
+    <string name="feature_series_download_following">Скачать эту и следующие</string>
+    <string name="feature_series_translations_download_episode">Скачать эту серию</string>
+    <string name="feature_series_translations_download_following">Скачать эту и следующие серии этой командой</string>
+    <string name="feature_series_translations_downloaded">Скачано — смотреть можно без сети</string>
+    <string name="feature_series_translations_downloading">Скачивается</string>
 </resources>

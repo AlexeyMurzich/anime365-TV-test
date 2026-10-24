@@ -8,7 +8,8 @@ dependencies {
     implementation(projects.core.data)
     implementation(projects.core.datastore)
     implementation(projects.core.model)
-    implementation(projects.core.player)
+    // MiniPlayer принимает VideoPlayer: оболочка приложения передаёт его из своего ViewModel.
+    api(projects.core.player)
     implementation(projects.core.ui)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.activity.compose)

@@ -7,6 +7,8 @@ plugins {
 dependencies {
     implementation(projects.core.data)
     implementation(projects.core.model)
+    // Скачивание из Выбора Перевода.
+    implementation(projects.core.player)
     implementation(projects.core.ui)
     implementation(libs.androidx.annotation)
     implementation(libs.kotlinx.coroutines.core)

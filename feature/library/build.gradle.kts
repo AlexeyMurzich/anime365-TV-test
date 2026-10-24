@@ -7,6 +7,8 @@ plugins {
 dependencies {
     implementation(projects.core.data)
     implementation(projects.core.datastore)
+    // Вкладка «Скачанное».
+    implementation(projects.core.player)
     implementation(projects.core.model)
     implementation(projects.core.ui)
     implementation(libs.kotlinx.coroutines.core)

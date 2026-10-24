@@ -37,4 +37,5 @@ object KadrIcons {
     val Logout = R.drawable.ic_logout
     val Upload = R.drawable.ic_upload
     val Download = R.drawable.ic_download
+    val Delete = R.drawable.ic_delete
 }

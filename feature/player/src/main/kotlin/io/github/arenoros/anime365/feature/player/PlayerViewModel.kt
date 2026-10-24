@@ -14,18 +14,26 @@ import io.github.arenoros.anime365.core.data.repository.SeriesRepository
 import io.github.arenoros.anime365.core.data.repository.SubscriptionRequiredException
 import io.github.arenoros.anime365.core.data.repository.TranslationRepository
 import io.github.arenoros.anime365.core.datastore.SettingsStore
+import io.github.arenoros.anime365.core.model.DownloadState
 import io.github.arenoros.anime365.core.model.Episode
+import io.github.arenoros.anime365.core.model.EpisodeDownload
 import io.github.arenoros.anime365.core.model.EpisodeProgress
+import io.github.arenoros.anime365.core.model.ReleaseStatus
 import io.github.arenoros.anime365.core.model.Series
+import io.github.arenoros.anime365.core.model.SeriesSummary
+import io.github.arenoros.anime365.core.model.StreamQuality
 import io.github.arenoros.anime365.core.model.Translation
 import io.github.arenoros.anime365.core.model.TranslationChoice
 import io.github.arenoros.anime365.core.model.VideoStream
 import io.github.arenoros.anime365.core.model.episodeAfter
 import io.github.arenoros.anime365.core.model.episodeBefore
 import io.github.arenoros.anime365.core.model.ofTeam
+import io.github.arenoros.anime365.core.model.pickHeight
+import io.github.arenoros.anime365.core.player.EpisodeDownloads
 import io.github.arenoros.anime365.core.player.EpisodeSkip
 import io.github.arenoros.anime365.core.player.PlayerMedia
 import io.github.arenoros.anime365.core.player.VideoPlayer
+import io.github.arenoros.anime365.core.player.cacheKey
 import io.github.arenoros.anime365.feature.player.navigation.PlayerKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -80,12 +88,6 @@ internal data class PlayerUiState(
     val previousEpisode: Episode? get() = episode?.let { series?.details?.episodeBefore(it.id) }
 }
 
-/** Самое большое Разрешение не выше целевого из Настроек; если все выше — самое маленькое. */
-internal fun pickQuality(
-    heights: List<Int>,
-    target: Int,
-): Int? = heights.filter { it <= target }.maxOrNull() ?: heights.minOrNull()
-
 private const val SAVE_INTERVAL_MS = 10_000L
 private const val NEXT_EPISODE_COUNTDOWN_SECONDS = 5
 private const val SECOND_MS = 1_000L
@@ -99,6 +101,7 @@ internal class PlayerViewModel
         private val translationRepository: TranslationRepository,
         private val libraryRepository: LibraryRepository,
         private val settingsStore: SettingsStore,
+        private val downloads: EpisodeDownloads,
         val videoPlayer: VideoPlayer,
         @param:ApplicationScope private val applicationScope: CoroutineScope,
     ) : ViewModel() {
@@ -111,6 +114,9 @@ internal class PlayerViewModel
         private var episodeId = key.episodeId
         private var translationId = key.translationId
         private var stream: VideoStream? = null
+
+        /** Ключ кэша, если играет скачанное. */
+        private var cacheKey: String? = null
         private var session = 0
         private var countdown: Job? = null
 
@@ -172,6 +178,18 @@ internal class PlayerViewModel
                 playing?.let { (series, current) ->
                     libraryRepository.setWatched(series.summary, current, watched = true)
                 }
+                // Скачанная серия той же Команды играет и без сети.
+                val downloaded =
+                    completedDownload {
+                        it.episode.id == episode.id &&
+                            it.translation.kind == translation.kind &&
+                            it.translation.team == translation.team
+                    }
+                if (downloaded != null) {
+                    episodeId = episode.id
+                    translationId = downloaded.translation.id
+                    return@launch start()
+                }
                 val translations = translationRepository.load(episode.id).getOrElse { return@launch fail(it) }
                 val match =
                     translations.ofTeam(
@@ -225,23 +243,25 @@ internal class PlayerViewModel
             cancelAutoplay()
             _uiState.update { it.copy(status = PlayerStatus.Loading) }
             viewModelScope.launch {
+                val downloaded = completedDownload { it.translation.id == translationId }
+                // Скачанное играет без сети: страницу аниме, Переводы и Видеопоток не запрашиваем.
+                if (downloaded == null) seriesRepository.refresh(key.seriesId, force = false)
                 // Без названия и Эпизода нечего показать ни на экране, ни в уведомлении.
-                seriesRepository.refresh(key.seriesId, force = false)
-                val series = seriesRepository.series(key.seriesId).first()
-                val episode = series?.details?.episodes?.firstOrNull { it.id == episodeId }
-                val translations = translationRepository.load(episodeId).getOrElse { return@launch fail(it) }
-                val translation = translations.firstOrNull { it.id == translationId }
-                if (series == null || episode == null || translation == null) {
-                    return@launch fail(IllegalStateException("Translation $translationId of $episodeId is gone"))
+                val series = seriesRepository.series(key.seriesId).first() ?: downloaded?.let(::seriesOf)
+                val episode = series?.details?.episodes?.firstOrNull { it.id == episodeId } ?: downloaded?.episode
+                val (translation, stream) =
+                    downloaded?.let(::sourceOf) ?: streamSource().getOrElse { return@launch fail(it) }
+                if (series == null || episode == null) {
+                    return@launch fail(IllegalStateException("Episode $episodeId of ${key.seriesId} is gone"))
                 }
-                val stream = translationRepository.stream(translationId).getOrElse { return@launch fail(it) }
                 val settings = settingsStore.settings.first()
                 val target = if (videoPlayer.isMeteredNetwork) settings.mobileHeight else settings.wifiHeight
-                val height = pickQuality(stream.qualities.map { it.height }, target)
+                val height = pickHeight(stream.qualities.map { it.height }, target)
                 val url = stream.qualities.first { it.height == height }.url
                 // Досмотренный Эпизод открывается с начала.
                 val start = libraryRepository.progressOf(episodeId)?.takeUnless { it.watched }?.positionMs ?: 0
                 this@PlayerViewModel.stream = stream
+                cacheKey = downloaded?.cacheKey
                 session = videoPlayer.play(media(series, episode, translation, url), start)
                 videoPlayer.subtitlesEnabled = _uiState.value.subtitlesEnabled
                 videoPlayer.speed = _uiState.value.speed
@@ -260,6 +280,45 @@ internal class PlayerViewModel
                 libraryRepository.save(Playback(series.summary, episode, translation, start, 0))
             }
         }
+
+        private suspend fun streamSource(): Result<Pair<Translation, VideoStream>> =
+            translationRepository.load(episodeId).fold(
+                onSuccess = { translations ->
+                    val translation = translations.firstOrNull { it.id == translationId }
+                    if (translation == null) {
+                        Result.failure(IllegalStateException("Translation $translationId of $episodeId is gone"))
+                    } else {
+                        translationRepository.stream(translationId).map { translation to it }
+                    }
+                },
+                onFailure = { Result.failure(it) },
+            )
+
+        private suspend fun completedDownload(match: (EpisodeDownload) -> Boolean): EpisodeDownload? =
+            downloads.downloads.first().firstOrNull { it.state == DownloadState.Completed && match(it) }
+
+        /** Скачанное: одно Разрешение, ссылка без Токена — видео читается из кэша по ключу. */
+        private fun sourceOf(download: EpisodeDownload): Pair<Translation, VideoStream> =
+            download.translation to
+                VideoStream(listOf(StreamQuality(download.height, download.videoUrl)), download.subtitlesUrl)
+
+        /** Кэш страницы аниме стёрт, а сети нет: название и постер — из записи Скачивания. */
+        private fun seriesOf(download: EpisodeDownload): Series =
+            Series(
+                SeriesSummary(
+                    download.seriesId,
+                    download.seriesTitle,
+                    null,
+                    download.posterUrl,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    ReleaseStatus.Released,
+                ),
+                details = null,
+            )
 
         private fun onEnded() {
             saveNow()
@@ -315,6 +374,7 @@ internal class PlayerViewModel
                 title = series.summary.title,
                 subtitle = listOf(episode.label, translation.team).filter { it.isNotEmpty() }.joinToString(" · "),
                 artworkUrl = series.details?.largePosterUrl ?: series.summary.posterUrl,
+                cacheKey = cacheKey,
                 hasPreviousEpisode = series.details?.episodeBefore(episode.id) != null,
                 hasNextEpisode = series.details?.episodeAfter(episode.id) != null,
             )

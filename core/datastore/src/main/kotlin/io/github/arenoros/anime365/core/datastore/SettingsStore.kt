@@ -16,12 +16,15 @@ import javax.inject.Singleton
 /**
  * Экран Настроек (docs/screens.md). [wifiHeight] и [mobileHeight] — Разрешение, с которого Плеер начинает:
  * наибольшее не выше этого. По умолчанию 1080p по Wi-Fi и 720p по мобильной сети (docs/roadmap.md, M2).
+ * Скачивание по умолчанию — только по Wi-Fi и в 720p (docs/roadmap.md, M4).
  */
 data class AppSettings(
     val newEpisodeNotifications: Boolean = true,
     val autoplayNext: Boolean = true,
     val wifiHeight: Int = 1080,
     val mobileHeight: Int = 720,
+    val downloadWifiOnly: Boolean = true,
+    val downloadHeight: Int = 720,
 )
 
 /** Настройки и одноразовые подсказки. Входят в резервную копию Android. */
@@ -59,6 +62,8 @@ internal class DataStoreSettingsStore
                 preferences[AUTOPLAY_NEXT] = settings.autoplayNext
                 preferences[WIFI_HEIGHT] = settings.wifiHeight
                 preferences[MOBILE_HEIGHT] = settings.mobileHeight
+                preferences[DOWNLOAD_WIFI_ONLY] = settings.downloadWifiOnly
+                preferences[DOWNLOAD_HEIGHT] = settings.downloadHeight
             }
         }
 
@@ -69,6 +74,8 @@ internal class DataStoreSettingsStore
                 autoplayNext = this[AUTOPLAY_NEXT] ?: defaults.autoplayNext,
                 wifiHeight = this[WIFI_HEIGHT] ?: defaults.wifiHeight,
                 mobileHeight = this[MOBILE_HEIGHT] ?: defaults.mobileHeight,
+                downloadWifiOnly = this[DOWNLOAD_WIFI_ONLY] ?: defaults.downloadWifiOnly,
+                downloadHeight = this[DOWNLOAD_HEIGHT] ?: defaults.downloadHeight,
             )
         }
 
@@ -78,5 +85,7 @@ internal class DataStoreSettingsStore
             val AUTOPLAY_NEXT = booleanPreferencesKey("autoplay_next")
             val WIFI_HEIGHT = intPreferencesKey("wifi_height")
             val MOBILE_HEIGHT = intPreferencesKey("mobile_height")
+            val DOWNLOAD_WIFI_ONLY = booleanPreferencesKey("download_wifi_only")
+            val DOWNLOAD_HEIGHT = intPreferencesKey("download_height")
         }
     }

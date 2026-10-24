@@ -5,6 +5,8 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.github.arenoros.anime365.core.player.AnimePlayer
+import io.github.arenoros.anime365.core.player.EpisodeDownloads
+import io.github.arenoros.anime365.core.player.MediaDownloads
 import io.github.arenoros.anime365.core.player.VideoPlayer
 
 @Module
@@ -12,4 +14,7 @@ import io.github.arenoros.anime365.core.player.VideoPlayer
 internal abstract class PlayerModule {
     @Binds
     abstract fun videoPlayer(player: AnimePlayer): VideoPlayer
+
+    @Binds
+    abstract fun episodeDownloads(downloads: MediaDownloads): EpisodeDownloads
 }

@@ -10,6 +10,7 @@ import io.github.arenoros.anime365.core.model.StreamQuality
 import io.github.arenoros.anime365.core.model.TranslationKind
 import io.github.arenoros.anime365.core.network.model.ApiErrorDto
 import io.github.arenoros.anime365.core.network.model.ApiResponse
+import io.github.arenoros.anime365.core.network.model.DownloadDto
 import io.github.arenoros.anime365.core.network.model.EmbedDto
 import io.github.arenoros.anime365.core.network.model.StreamDto
 import io.github.arenoros.anime365.core.network.model.TranslationDto
@@ -102,6 +103,17 @@ class TranslationRepositoryTest {
                                 StreamDto(360, emptyList()),
                             ),
                         subtitlesUrl = "/episodeTranslations/5987619.ass?willcache",
+                        download =
+                            listOf(
+                                DownloadDto(
+                                    720,
+                                    "https://smotret-anime.co/translations/mp4/5987619?download=1&height=720",
+                                ),
+                                DownloadDto(
+                                    1080,
+                                    "https://smotret-anime.co/translations/mp4/5987619?download=1&height=1080",
+                                ),
+                            ),
                     ),
                 )
             }
@@ -113,6 +125,7 @@ class TranslationRepositoryTest {
                 stream.qualities,
             )
             assertEquals("https://smotret-anime.app/episodeTranslations/5987619.ass?willcache", stream.subtitlesUrl)
+            assertEquals(listOf(1080, 720), stream.downloads.map { it.height })
         }
 
     @Test

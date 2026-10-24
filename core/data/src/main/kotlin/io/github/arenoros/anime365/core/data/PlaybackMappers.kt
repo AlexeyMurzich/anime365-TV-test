@@ -43,8 +43,14 @@ internal fun EmbedDto.toModel(): VideoStream {
             .sortedByDescending { it.height }
             .map { StreamQuality(it.height, it.urls.first()) }
     check(qualities.isNotEmpty()) { "Empty video stream" }
+    val site = URI(ANIME365_SITE_URL)
+    val downloads =
+        download
+            .sortedByDescending {
+                it.height
+            }.map { StreamQuality(it.height, site.resolve(it.url).toString()) }
     // Путь субтитров — от корня сайта, и отдаются они без Токена (docs/api-notes.md).
-    return VideoStream(qualities, subtitlesUrl?.let { URI(ANIME365_SITE_URL).resolve(it).toString() })
+    return VideoStream(qualities, subtitlesUrl?.let { site.resolve(it).toString() }, downloads)
 }
 
 internal fun EpisodeProgressEntity.toModel(): EpisodeProgress =

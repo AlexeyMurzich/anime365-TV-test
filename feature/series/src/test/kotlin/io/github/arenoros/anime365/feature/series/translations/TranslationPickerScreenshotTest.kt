@@ -3,10 +3,12 @@ package io.github.arenoros.anime365.feature.series.translations
 import androidx.compose.material3.Surface
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
+import io.github.arenoros.anime365.core.model.DownloadState
 import io.github.arenoros.anime365.core.model.Translation
 import io.github.arenoros.anime365.core.model.TranslationChoice
 import io.github.arenoros.anime365.core.model.TranslationKind
 import io.github.arenoros.anime365.core.testing.captureScreen
+import io.github.arenoros.anime365.feature.series.navigation.PickerPurpose
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,6 +51,17 @@ class TranslationPickerScreenshotTest {
     @Test
     fun guestSeesListWithLoginBanner() =
         capture("translations_guest", loaded.copy(access = PlaybackAccess.NeedsLogin, choice = null))
+
+    @Test
+    fun downloadFollowingMarksDownloaded() =
+        capture(
+            "translations_download",
+            loaded.copy(
+                purpose = PickerPurpose.DownloadFollowing,
+                downloads = mapOf(1 to DownloadState.Completed, 3 to DownloadState.Downloading),
+                isEnqueuing = true,
+            ),
+        )
 
     @Test
     fun loading() = capture("translations_loading", TranslationPickerUiState(episodeLabel = "1 серия"))

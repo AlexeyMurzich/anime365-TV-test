@@ -87,6 +87,7 @@ internal fun SeriesRoute(
     seriesId: Int,
     onOpenGenre: (Int) -> Unit,
     onOpenEpisode: (episodeId: Int) -> Unit,
+    onDownloadEpisode: (episodeId: Int, following: Boolean) -> Unit,
     onPlay: (episodeId: Int, translationId: Int) -> Unit,
     onBack: () -> Unit,
     viewModel: SeriesViewModel =
@@ -105,6 +106,7 @@ internal fun SeriesRoute(
             viewModel.setStatus(status)
         },
         onSetWatched = viewModel::setWatched,
+        onDownload = { episode, following -> onDownloadEpisode(episode.id, following) },
         onBack = onBack,
     )
 }
@@ -120,6 +122,7 @@ internal fun SeriesScreen(
     onSetWatched: (Episode, Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onDownload: (Episode, following: Boolean) -> Unit = { _, _ -> },
 ) {
     val series = state.series
     Scaffold(
@@ -157,6 +160,7 @@ internal fun SeriesScreen(
                         onPlay,
                         onSetStatus,
                         onSetWatched,
+                        onDownload,
                     )
                 }
             }
@@ -174,20 +178,13 @@ private fun SeriesContent(
     onPlay: (episodeId: Int, translationId: Int) -> Unit,
     onSetStatus: (LibraryStatus?) -> Unit,
     onSetWatched: (Episode, Boolean) -> Unit,
+    onDownload: (Episode, following: Boolean) -> Unit,
 ) {
     var tab by rememberSaveable { mutableStateOf(SeriesTab.Description) }
     var editingStatus by rememberSaveable { mutableStateOf(false) }
     var episodeActions by remember { mutableStateOf<Episode?>(null) }
     episodeActions?.let { episode ->
-        EpisodeActionsSheet(
-            episode = episode,
-            watched = state.progress[episode.id]?.watched == true,
-            onSetWatched = { watched ->
-                onSetWatched(episode, watched)
-                episodeActions = null
-            },
-            onDismiss = { episodeActions = null },
-        )
+        EpisodeActionsFor(episode, series, state, onDownload, onSetWatched, onDone = { episodeActions = null })
     }
     val details = series.details
     if (editingStatus) {
@@ -235,6 +232,31 @@ private fun SeriesContent(
             }
         }
     }
+}
+
+@Composable
+private fun EpisodeActionsFor(
+    episode: Episode,
+    series: Series,
+    state: SeriesUiState,
+    onDownload: (Episode, following: Boolean) -> Unit,
+    onSetWatched: (Episode, Boolean) -> Unit,
+    onDone: () -> Unit,
+) {
+    EpisodeActionsSheet(
+        episode = episode,
+        watched = state.progress[episode.id]?.watched == true,
+        hasFollowing = series.details?.hasFollowing(episode) == true,
+        onDownload = { following ->
+            onDownload(episode, following)
+            onDone()
+        },
+        onSetWatched = { watched ->
+            onSetWatched(episode, watched)
+            onDone()
+        },
+        onDismiss = onDone,
+    )
 }
 
 @Composable
@@ -477,6 +499,10 @@ private fun TextPlaceholder() {
 }
 
 private const val PLACEHOLDER_LINES = 4
+
+/** После серии есть ещё серии того же типа — есть что скачать «этой и следующими». */
+private fun SeriesDetails.hasFollowing(episode: Episode): Boolean =
+    episodes.drop(episodes.indexOf(episode) + 1).any { it.type == episode.type }
 
 private fun ReleaseStatus.toPosterStatus(): PosterStatus =
     when (this) {

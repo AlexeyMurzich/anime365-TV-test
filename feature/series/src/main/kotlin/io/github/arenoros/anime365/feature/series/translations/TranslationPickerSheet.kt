@@ -17,9 +17,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,9 +43,11 @@ import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrRadius
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
+import io.github.arenoros.anime365.core.model.DownloadState
 import io.github.arenoros.anime365.core.model.Translation
 import io.github.arenoros.anime365.core.model.TranslationKind
 import io.github.arenoros.anime365.feature.series.R
+import io.github.arenoros.anime365.feature.series.navigation.PickerPurpose
 
 private const val PLACEHOLDER_ROWS = 4
 
@@ -51,25 +55,44 @@ private const val PLACEHOLDER_ROWS = 4
 internal fun TranslationPickerRoute(
     seriesId: Int,
     episodeId: Int,
+    purpose: PickerPurpose,
     onPlay: (translationId: Int) -> Unit,
     onLogin: () -> Unit,
     onSubscription: () -> Unit,
+    onClose: () -> Unit,
     viewModel: TranslationPickerViewModel =
         hiltViewModel<TranslationPickerViewModel, TranslationPickerViewModel.Factory>(
-            key = "translations/$episodeId",
-            creationCallback = { it.create(seriesId, episodeId) },
+            key = "translations/$episodeId/$purpose",
+            creationCallback = { it.create(seriesId, episodeId, purpose) },
         ),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                PickerEvent.Enqueued -> onClose()
+                PickerEvent.NeedsLogin -> onLogin()
+                PickerEvent.NeedsSubscription -> onSubscription()
+            }
+        }
+    }
     TranslationPickerSheet(
         state = state,
         onSelectKind = viewModel::selectKind,
         onRetry = viewModel::refresh,
         onSelect = { translation ->
             when (state.access) {
-                PlaybackAccess.Allowed -> onPlay(translation.id)
-                PlaybackAccess.NeedsLogin -> onLogin()
-                PlaybackAccess.NeedsSubscription -> onSubscription()
+                PlaybackAccess.Allowed -> {
+                    if (purpose == PickerPurpose.Watch) onPlay(translation.id) else viewModel.download(translation)
+                }
+
+                PlaybackAccess.NeedsLogin -> {
+                    onLogin()
+                }
+
+                PlaybackAccess.NeedsSubscription -> {
+                    onSubscription()
+                }
             }
         },
     )
@@ -90,7 +113,10 @@ internal fun TranslationPickerSheet(
             Modifier.padding(horizontal = KadrSpacing.Space4).semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
         )
+        PurposeLine(state.purpose)
+        if (state.isEnqueuing) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = KadrSpacing.Space2))
         AccessBanner(state.access)
+        state.downloadError?.let { StaleDataBanner(errorMessage(it), Modifier.padding(top = KadrSpacing.Space2)) }
         val error = state.error
         when {
             state.translations.isEmpty() && state.isRefreshing -> {
@@ -113,6 +139,7 @@ internal fun TranslationPickerSheet(
                         TranslationRow(
                             translation,
                             state.isRemembered(translation),
+                            state.downloads[translation.id],
                             onClick = { onSelect(translation) },
                         )
                     }
@@ -120,6 +147,23 @@ internal fun TranslationPickerSheet(
             }
         }
     }
+}
+
+/** В режиме Скачивания — что именно поставится в очередь. */
+@Composable
+private fun PurposeLine(purpose: PickerPurpose) {
+    val text =
+        when (purpose) {
+            PickerPurpose.Watch -> return
+            PickerPurpose.DownloadEpisode -> R.string.feature_series_translations_download_episode
+            PickerPurpose.DownloadFollowing -> R.string.feature_series_translations_download_following
+        }
+    Text(
+        stringResource(text),
+        Modifier.padding(horizontal = KadrSpacing.Space4),
+        style = MaterialTheme.typography.bodyMedium,
+        color = KadrTheme.palette.inkMuted,
+    )
 }
 
 @Composable
@@ -153,11 +197,15 @@ private fun KindChips(
     }
 }
 
-/** Команда, Источник и Разрешение. Вшитые или Отдельные субтитры — становится известно при запуске. */
+/**
+ * Команда, Источник и Разрешение. Вшитые или Отдельные субтитры — становится известно при запуске.
+ * Скачанный Перевод играет без сети — это видно в строке.
+ */
 @Composable
 private fun TranslationRow(
     translation: Translation,
     remembered: Boolean,
+    download: DownloadState?,
     onClick: () -> Unit,
 ) {
     Row(
@@ -182,6 +230,19 @@ private fun TranslationRow(
                     stringResource(R.string.feature_series_translations_remembered),
                     style = MaterialTheme.typography.bodySmall,
                     color = KadrTheme.palette.primary,
+                )
+            }
+            if (download != null) {
+                Text(
+                    stringResource(
+                        if (download == DownloadState.Completed) {
+                            R.string.feature_series_translations_downloaded
+                        } else {
+                            R.string.feature_series_translations_downloading
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = KadrTheme.palette.inkMuted,
                 )
             }
         }

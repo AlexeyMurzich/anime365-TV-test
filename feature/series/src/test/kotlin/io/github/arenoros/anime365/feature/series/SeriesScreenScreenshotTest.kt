@@ -114,7 +114,15 @@ class SeriesScreenScreenshotTest {
     @Test
     fun episodeActions() =
         compose.captureScreen("series_episode_actions") {
-            Surface { EpisodeActions(Episode(105, 5.0, "5 серия", "tv"), watched = false, onSetWatched = {}) }
+            Surface {
+                EpisodeActions(
+                    Episode(105, 5.0, "5 серия", "tv"),
+                    watched = false,
+                    hasFollowing = true,
+                    onDownload = {},
+                    onSetWatched = {},
+                )
+            }
         }
 
     @Test

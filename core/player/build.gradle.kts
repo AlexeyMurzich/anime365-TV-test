@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.anime365.android.library)
     alias(libs.plugins.anime365.android.compose)
     alias(libs.plugins.anime365.hilt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 dependencies {
@@ -13,6 +14,13 @@ dependencies {
     api(libs.androidx.media3.session)
     api(libs.hilt.android)
     api(libs.kotlinx.coroutines.core)
+    // EpisodeDownload и Перевод — в публичном API Скачивания.
+    api(projects.core.model)
+    // Токен для ссылок Скачивания и настройки «Только по Wi-Fi» и Разрешение.
+    implementation(projects.core.datastore)
+    // Что скачано — JSON в самом запросе Media3 (DownloadRecord).
+    implementation(libs.kotlinx.serialization.core)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.annotation)
     // @OptIn для нестабильного API Media3.
     implementation(libs.androidx.annotation.experimental)

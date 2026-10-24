@@ -23,6 +23,14 @@ data class TranslationDto(
 data class EmbedDto(
     val stream: List<StreamDto> = emptyList(),
     val subtitlesUrl: String? = null,
+    val download: List<DownloadDto> = emptyList(),
+)
+
+/** Ссылка для Скачивания: без Токена 403, с Токеном — 302 на свежую ссылку CDN (docs/api-notes.md). */
+@Serializable
+data class DownloadDto(
+    val height: Int,
+    val url: String,
 )
 
 /** [urls] — зеркала одного файла. */

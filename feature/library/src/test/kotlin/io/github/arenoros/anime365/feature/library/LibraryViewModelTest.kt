@@ -2,6 +2,7 @@ package io.github.arenoros.anime365.feature.library
 
 import io.github.arenoros.anime365.core.data.repository.RememberedTranslation
 import io.github.arenoros.anime365.core.model.Episode
+import io.github.arenoros.anime365.core.model.EpisodeDownload
 import io.github.arenoros.anime365.core.model.EpisodeProgress
 import io.github.arenoros.anime365.core.model.LastWatched
 import io.github.arenoros.anime365.core.model.LibraryEntry
@@ -10,9 +11,12 @@ import io.github.arenoros.anime365.core.model.ReleaseStatus
 import io.github.arenoros.anime365.core.model.Series
 import io.github.arenoros.anime365.core.model.SeriesDetails
 import io.github.arenoros.anime365.core.model.SeriesSummary
+import io.github.arenoros.anime365.core.model.StreamQuality
 import io.github.arenoros.anime365.core.model.Translation
 import io.github.arenoros.anime365.core.model.TranslationChoice
 import io.github.arenoros.anime365.core.model.TranslationKind
+import io.github.arenoros.anime365.core.model.VideoStream
+import io.github.arenoros.anime365.core.testing.FakeEpisodeDownloads
 import io.github.arenoros.anime365.core.testing.FakeLibraryRepository
 import io.github.arenoros.anime365.core.testing.FakeSeriesRepository
 import io.github.arenoros.anime365.core.testing.FakeTranslationRepository
@@ -32,6 +36,7 @@ class LibraryViewModelTest {
     private val library = FakeLibraryRepository()
     private val series = FakeSeriesRepository()
     private val translations = FakeTranslationRepository()
+    private val downloads = FakeEpisodeDownloads()
 
     private val first = Episode(101, 1.0, "1 серия", "tv")
     private val second = Episode(102, 2.0, "2 серия", "tv")
@@ -119,7 +124,30 @@ class LibraryViewModelTest {
             assertEquals(LibraryEvent.OpenSeries(7), continueWatching())
         }
 
-    private fun viewModel() = LibraryViewModel(library, series, RememberedTranslation(library, translations))
+    @Test
+    fun downloadsAreShownAndRemoved() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val translation = Translation(1, first.id, TranslationKind.VoiceRu, "AniLibria", "tv", 1080)
+            val stream =
+                VideoStream(
+                    emptyList(),
+                    subtitlesUrl = null,
+                    downloads = listOf(StreamQuality(720, "https://site/translations/mp4/1?download=1&height=720")),
+                )
+            downloads.download(frieren.summary, first, translation, stream)
+            val viewModel = viewModel()
+            backgroundScope.launch { viewModel.uiState.collect {} }
+
+            val shown =
+                viewModel.uiState.value.downloads
+                    .single()
+            assertEquals(720, shown.height)
+            viewModel.removeDownloads(listOf(shown))
+
+            assertEquals(emptyList<EpisodeDownload>(), viewModel.uiState.value.downloads)
+        }
+
+    private fun viewModel() = LibraryViewModel(library, series, RememberedTranslation(library, translations), downloads)
 
     private fun TestScope.continueWatching(): LibraryEvent {
         val viewModel = viewModel()

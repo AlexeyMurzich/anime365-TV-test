@@ -17,9 +17,24 @@ class DataStoreSettingsStoreTest {
             assertEquals(AppSettings(), store.settings.first())
 
             // Одна запись: на Windows DataStore не может заменить уже записанный файл, тест падал бы не по делу.
-            store.updateSettings { it.copy(newEpisodeNotifications = false, wifiHeight = 480, mobileHeight = 360) }
+            store.updateSettings {
+                it.copy(
+                    newEpisodeNotifications = false,
+                    wifiHeight = 480,
+                    mobileHeight = 360,
+                    downloadWifiOnly = false,
+                    downloadHeight = 1080,
+                )
+            }
 
-            val expected = AppSettings(newEpisodeNotifications = false, wifiHeight = 480, mobileHeight = 360)
+            val expected =
+                AppSettings(
+                    newEpisodeNotifications = false,
+                    wifiHeight = 480,
+                    mobileHeight = 360,
+                    downloadWifiOnly = false,
+                    downloadHeight = 1080,
+                )
             assertEquals(expected, store.settings.first())
         }
 }

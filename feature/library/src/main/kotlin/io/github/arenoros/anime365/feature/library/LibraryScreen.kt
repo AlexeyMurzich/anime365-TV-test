@@ -18,7 +18,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,6 +35,7 @@ import io.github.arenoros.anime365.core.designsystem.component.ListItemPlacehold
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
+import io.github.arenoros.anime365.core.model.EpisodeDownload
 import io.github.arenoros.anime365.core.model.LibraryEntry
 import io.github.arenoros.anime365.core.model.LibraryStatus
 import io.github.arenoros.anime365.core.ui.label
@@ -63,10 +64,22 @@ internal fun LibraryRoute(
         onOpenSeries = onOpenSeries,
         onContinue = viewModel::continueWatching,
         onDismissHint = viewModel::dismissHint,
+        downloadActions =
+            DownloadActions(
+                onPlay = { onPlay(it.seriesId, it.episode.id, it.translation.id) },
+                onRetry = viewModel::retryDownload,
+                onRemove = viewModel::removeDownloads,
+            ),
     )
 }
 
-/** Список: вкладки по Статусам; Скачанное появится вместе со Скачиванием (docs/roadmap.md, M4). */
+internal class DownloadActions(
+    val onPlay: (EpisodeDownload) -> Unit,
+    val onRetry: (EpisodeDownload) -> Unit,
+    val onRemove: (List<EpisodeDownload>) -> Unit,
+)
+
+/** Список: вкладки по Статусам и последняя — Скачанное. */
 @Composable
 internal fun LibraryScreen(
     state: LibraryUiState,
@@ -74,8 +87,12 @@ internal fun LibraryScreen(
     onContinue: (Int) -> Unit,
     onDismissHint: () -> Unit,
     modifier: Modifier = Modifier,
+    downloadActions: DownloadActions = DownloadActions({}, {}, {}),
+    initialTab: Int = 0,
 ) {
-    var tab by rememberSaveable { mutableStateOf(LibraryStatus.Watching) }
+    // Вкладки Статусов по порядку, за ними — Скачанное.
+    var tab by rememberSaveable { mutableIntStateOf(initialTab) }
+    val status = LibraryStatus.entries.getOrNull(tab)
     Scaffold(
         modifier = modifier,
         topBar = { KadrTopAppBar(stringResource(R.string.feature_library_title)) },
@@ -83,32 +100,46 @@ internal fun LibraryScreen(
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             PrimaryScrollableTabRow(
-                selectedTabIndex = tab.ordinal,
+                selectedTabIndex = tab,
                 containerColor = KadrTheme.palette.surface,
                 edgePadding = KadrSpacing.Space2,
             ) {
-                LibraryStatus.entries.forEach { status ->
+                LibraryStatus.entries.forEach { entry ->
                     Tab(
-                        selected = tab == status,
-                        onClick = { tab = status },
-                        text = { Text(status.label().uppercase()) },
+                        selected = status == entry,
+                        onClick = { tab = entry.ordinal },
+                        text = { Text(entry.label().uppercase()) },
                     )
                 }
+                Tab(
+                    selected = status == null,
+                    onClick = { tab = LibraryStatus.entries.size },
+                    text = { Text(stringResource(R.string.feature_library_downloads_tab).uppercase()) },
+                )
             }
             if (!state.hintShown) LocalOnlyHint(onDismissHint)
             val entries = state.entries
             when {
+                status == null -> {
+                    DownloadsTab(
+                        state.downloads,
+                        onPlay = downloadActions.onPlay,
+                        onRetry = downloadActions.onRetry,
+                        onRemove = downloadActions.onRemove,
+                    )
+                }
+
                 entries == null -> {
                     repeat(PLACEHOLDER_ROWS) { ListItemPlaceholder(thumbnailWidth = 56.dp) }
                 }
 
-                state.of(tab).isEmpty() -> {
+                state.of(status).isEmpty() -> {
                     EmptyState(stringResource(R.string.feature_library_empty))
                 }
 
                 else -> {
                     LazyColumn(Modifier.fillMaxSize()) {
-                        items(state.of(tab), key = { it.seriesId }) { entry ->
+                        items(state.of(status), key = { it.seriesId }) { entry ->
                             LibraryRow(entry, onOpenSeries, onContinue)
                         }
                     }

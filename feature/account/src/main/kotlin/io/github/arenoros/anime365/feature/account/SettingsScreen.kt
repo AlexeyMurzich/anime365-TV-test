@@ -52,7 +52,7 @@ internal fun SettingsRoute(
     )
 }
 
-/** Уведомления и Плеер (docs/screens.md, «Настройки»); остальные пункты появятся вместе со своими фичами. */
+/** Уведомления, Плеер и Скачивание (docs/screens.md, «Настройки»); остальные пункты — вместе со своими фичами. */
 @Composable
 internal fun SettingsScreen(
     settings: AppSettings?,
@@ -105,6 +105,17 @@ internal fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = KadrTheme.palette.inkMuted,
             )
+            HorizontalDivider(Modifier.padding(vertical = KadrSpacing.Space2))
+            SectionTitle(R.string.feature_account_settings_downloads)
+            SwitchRow(
+                title = stringResource(R.string.feature_account_settings_download_wifi_only),
+                summary = stringResource(R.string.feature_account_settings_download_wifi_only_summary),
+                checked = settings.downloadWifiOnly,
+                onCheckedChange = { enabled -> onUpdate { it.copy(downloadWifiOnly = enabled) } },
+            )
+            HeightChoice(R.string.feature_account_settings_download_height, settings.downloadHeight) { height ->
+                onUpdate { it.copy(downloadHeight = height) }
+            }
         }
     }
 }

@@ -3,7 +3,9 @@ package io.github.arenoros.anime365.feature.player
 import androidx.media3.common.Player
 import io.github.arenoros.anime365.core.data.repository.NotLoggedInException
 import io.github.arenoros.anime365.core.data.repository.SubscriptionRequiredException
+import io.github.arenoros.anime365.core.model.DownloadState
 import io.github.arenoros.anime365.core.model.Episode
+import io.github.arenoros.anime365.core.model.EpisodeDownload
 import io.github.arenoros.anime365.core.model.EpisodeProgress
 import io.github.arenoros.anime365.core.model.ReleaseStatus
 import io.github.arenoros.anime365.core.model.Series
@@ -16,6 +18,7 @@ import io.github.arenoros.anime365.core.model.VideoStream
 import io.github.arenoros.anime365.core.player.EpisodeSkip
 import io.github.arenoros.anime365.core.player.PlayerMedia
 import io.github.arenoros.anime365.core.player.VideoPlayer
+import io.github.arenoros.anime365.core.testing.FakeEpisodeDownloads
 import io.github.arenoros.anime365.core.testing.FakeLibraryRepository
 import io.github.arenoros.anime365.core.testing.FakeSeriesRepository
 import io.github.arenoros.anime365.core.testing.FakeSettingsStore
@@ -63,6 +66,7 @@ class PlayerViewModelTest {
         }
     private val library = FakeLibraryRepository()
     private val settings = FakeSettingsStore()
+    private val downloads = FakeEpisodeDownloads()
     private val player = FakeVideoPlayer()
 
     @Test
@@ -223,6 +227,44 @@ class PlayerViewModelTest {
         }
 
     @Test
+    fun downloadedEpisodePlaysFromCacheWithoutNetwork() =
+        runTest(mainDispatcherRule.dispatcher) {
+            translations.translations.value = emptyMap()
+            translations.stream = { error("Видеопоток без сети не запросить") }
+            seriesRepository.result = Result.failure(java.io.IOException("Нет сети"))
+            downloads.downloads.value = listOf(downloaded(first, anilibria))
+
+            val viewModel = viewModel()
+
+            val (media, _) = player.played.single()
+            assertEquals("https://site/translations/mp4/1?download=1&height=720", media.videoUrl)
+            assertEquals("download:1", media.cacheKey)
+            assertEquals("https://site/1.ass", media.subtitlesUrl)
+            assertEquals(PlayerStatus.Playing, viewModel.uiState.value.status)
+            assertEquals(listOf(720), viewModel.uiState.value.qualities)
+            assertEquals(emptyList<Pair<Int, Boolean>>(), seriesRepository.refreshCalls)
+        }
+
+    @Test
+    fun nextEpisodeDownloadedWithSameTeamPlaysOffline() =
+        runTest(mainDispatcherRule.dispatcher) {
+            translations.translations.value = mapOf(first.id to listOf(anilibria))
+            downloads.downloads.value = listOf(downloaded(second, anilibriaNext))
+            val viewModel = viewModel()
+            translations.translations.value = emptyMap()
+
+            viewModel.playNext()
+
+            assertEquals(second, viewModel.uiState.value.episode)
+            assertEquals(
+                "download:2",
+                player.played
+                    .last()
+                    .first.cacheKey,
+            )
+        }
+
+    @Test
     fun autoplayOffLeavesEndedEpisode() =
         runTest(mainDispatcherRule.dispatcher) {
             translations.translations.value = mapOf(first.id to listOf(anilibria), second.id to listOf(anilibriaNext))
@@ -253,15 +295,22 @@ class PlayerViewModelTest {
             assertEquals(720, viewModel.uiState.value.quality)
         }
 
-    @Test
-    fun qualityPrefersHighestNotAboveTarget() {
-        assertEquals(1080, pickQuality(listOf(2160, 1080, 720), target = 1080))
-        assertEquals(720, pickQuality(listOf(1080, 720, 360), target = 720))
-        assertEquals(480, pickQuality(listOf(480, 360), target = 1080))
-        // Все выше целевого — самое маленькое из них.
-        assertEquals(1080, pickQuality(listOf(2160, 1080), target = 720))
-        assertNull(pickQuality(emptyList(), target = 1080))
-    }
+    private fun downloaded(
+        episode: Episode,
+        translation: Translation,
+    ) = EpisodeDownload(
+        7,
+        "Фрирен",
+        null,
+        episode,
+        translation,
+        720,
+        "https://site/translations/mp4/${translation.id}?download=1&height=720",
+        "https://site/${translation.id}.ass",
+        DownloadState.Completed,
+        bytesDownloaded = 100,
+        contentLength = 100,
+    )
 
     private fun TestScope.viewModel(key: PlayerKey = PlayerKey(7, first.id, anilibria.id)): PlayerViewModel =
         PlayerViewModel(
@@ -270,6 +319,7 @@ class PlayerViewModelTest {
             translations,
             library,
             settings,
+            downloads,
             player,
             backgroundScope,
         )

@@ -1,6 +1,7 @@
 package io.github.arenoros.anime365.feature.player
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -56,7 +57,7 @@ import io.github.arenoros.anime365.feature.player.navigation.PlayerKey
 import kotlinx.coroutines.launch
 import io.github.arenoros.anime365.core.designsystem.R as DesignR
 
-private const val VIDEO_ASPECT_RATIO = 16f / 9f
+internal const val VIDEO_ASPECT_RATIO = 16f / 9f
 
 @Composable
 internal fun PlayerRoute(
@@ -64,7 +65,8 @@ internal fun PlayerRoute(
     onChooseTranslation: (episodeId: Int) -> Unit,
     onLogin: () -> Unit,
     onSubscription: () -> Unit,
-    onBack: () -> Unit,
+    onMinimize: () -> Unit,
+    onClose: () -> Unit,
     viewModel: PlayerViewModel =
         hiltViewModel<PlayerViewModel, PlayerViewModel.Factory>(creationCallback = { it.create(key) }),
 ) {
@@ -86,13 +88,23 @@ internal fun PlayerRoute(
         viewModel.retryIfBlocked()
         onPauseOrDispose { viewModel.saveNow() }
     }
+    // Видео есть или вот-вот будет — «Назад» сворачивает Плеер в окно; смотреть нечего — закрывает.
+    val leave =
+        if (state.status == PlayerStatus.Playing ||
+            state.status == PlayerStatus.Loading
+        ) {
+            onMinimize
+        } else {
+            onClose
+        }
+    BackHandler(onBack = leave)
     PlayerScreen(
         state = state,
         player = viewModel.videoPlayer,
         snackbars = snackbars,
         actions =
             PlayerActions(
-                onBack = onBack,
+                onBack = leave,
                 onChooseTranslation = onChooseTranslation,
                 onPlayNext = viewModel::playNext,
                 onPlayPrevious = viewModel::playPrevious,
@@ -142,7 +154,6 @@ internal fun PlayerScreen(
     val playing = !rememberPlayPauseButtonState(player?.player).showPlay
     val toggleFullscreen = rememberOrientationToggle(landscape)
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
-    AutoPictureInPicture(playing)
     Box(modifier.fillMaxSize().background(Color.Black).then(if (playing) Modifier.keepScreenOn() else Modifier)) {
         when {
             inPictureInPicture -> {

@@ -13,7 +13,9 @@ import io.github.arenoros.anime365.core.datastore.AppSettings
 import io.github.arenoros.anime365.core.datastore.SettingsStore
 import io.github.arenoros.anime365.core.model.Account
 import io.github.arenoros.anime365.core.model.ContinueWatching
+import io.github.arenoros.anime365.core.model.DownloadState
 import io.github.arenoros.anime365.core.model.Episode
+import io.github.arenoros.anime365.core.model.EpisodeDownload
 import io.github.arenoros.anime365.core.model.EpisodeProgress
 import io.github.arenoros.anime365.core.model.LastWatched
 import io.github.arenoros.anime365.core.model.LibraryEntry
@@ -23,6 +25,7 @@ import io.github.arenoros.anime365.core.model.SeriesSummary
 import io.github.arenoros.anime365.core.model.Translation
 import io.github.arenoros.anime365.core.model.TranslationChoice
 import io.github.arenoros.anime365.core.model.VideoStream
+import io.github.arenoros.anime365.core.player.EpisodeDownloads
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -185,4 +188,43 @@ class FakeSettingsStore : SettingsStore {
     override suspend fun updateSettings(transform: (AppSettings) -> AppSettings) {
         settings.value = transform(settings.value)
     }
+}
+
+class FakeEpisodeDownloads : EpisodeDownloads {
+    override val downloads = MutableStateFlow<List<EpisodeDownload>>(emptyList())
+    val retried = mutableListOf<Int>()
+
+    override suspend fun download(
+        series: SeriesSummary,
+        episode: Episode,
+        translation: Translation,
+        stream: VideoStream,
+    ) {
+        if (downloads.value.any { it.translation.id == translation.id }) return
+        val quality = stream.downloads.first()
+        downloads.value +=
+            EpisodeDownload(
+                series.id,
+                series.title,
+                series.posterUrl,
+                episode,
+                translation,
+                quality.height,
+                quality.url,
+                stream.subtitlesUrl,
+                DownloadState.Queued,
+                bytesDownloaded = 0,
+                contentLength = null,
+            )
+    }
+
+    override fun retry(translationId: Int) {
+        retried += translationId
+    }
+
+    override fun remove(translationIds: Collection<Int>) {
+        downloads.value = downloads.value.filterNot { it.translation.id in translationIds }
+    }
+
+    override fun resume() = Unit
 }

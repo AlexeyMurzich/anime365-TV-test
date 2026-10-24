@@ -32,6 +32,10 @@
     <string name="feature_account_settings_wifi_height">Разрешение по Wi-Fi</string>
     <string name="feature_account_settings_mobile_height">Разрешение по мобильной сети</string>
     <string name="feature_account_settings_height">%1$dp</string>
+    <string name="feature_account_settings_downloads">Скачивание</string>
+    <string name="feature_account_settings_download_wifi_only">Только по Wi-Fi</string>
+    <string name="feature_account_settings_download_wifi_only_summary">По мобильной сети скачивание ждёт Wi-Fi</string>
+    <string name="feature_account_settings_download_height">Разрешение скачивания</string>
     <string name="feature_account_settings_height_hint">Если у перевода такого нет — ближайшее меньшее. Во время просмотра разрешение меняется в настройках плеера.</string>
 
     <string name="feature_account_login_title">Вход</string>

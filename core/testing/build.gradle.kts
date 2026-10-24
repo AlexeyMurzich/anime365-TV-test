@@ -3,10 +3,11 @@ plugins {
     alias(libs.plugins.anime365.android.compose)
 }
 
-// Для unit-тестов фич: фейки репозиториев (интерфейсы — в :core:data) и настроек, снимки экранов Roborazzi.
+// Для unit-тестов фич: фейки репозиториев (интерфейсы — в :core:data), настроек и Скачивания, снимки экранов Roborazzi.
 dependencies {
     api(projects.core.data)
     api(projects.core.datastore)
+    api(projects.core.player)
     api(projects.core.model)
     api(libs.junit)
     api(libs.kotlinx.coroutines.core)

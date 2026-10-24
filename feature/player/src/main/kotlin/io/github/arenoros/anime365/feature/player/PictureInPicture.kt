@@ -20,9 +20,12 @@ import androidx.core.view.WindowInsetsControllerCompat
 
 private val VIDEO_RATIO = Rational(16, 9)
 
-/** Свернуть в «картинку в картинке», пока видео играет: по кнопке «Домой» или жесту. */
+/**
+ * Свернуть в «картинку в картинке», пока видео играет: по кнопке «Домой» или жесту. Одна на
+ * приложение: настройка общая для Activity, а Плеер бывает и развёрнут, и в окне.
+ */
 @Composable
-internal fun AutoPictureInPicture(playing: Boolean) {
+fun AutoPictureInPicture(playing: Boolean) {
     val activity = LocalActivity.current as? ComponentActivity ?: return
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         DisposableEffect(activity, playing) {
@@ -41,7 +44,7 @@ internal fun AutoPictureInPicture(playing: Boolean) {
 }
 
 @Composable
-internal fun rememberIsInPictureInPicture(): Boolean {
+fun rememberIsInPictureInPicture(): Boolean {
     val activity = LocalActivity.current as? ComponentActivity
     var inPip by remember(activity) { mutableStateOf(activity?.isInPictureInPictureMode == true) }
     DisposableEffect(activity) {

@@ -58,4 +58,7 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     implementation(projects.core.data)
     implementation(projects.core.model)
+    implementation(projects.core.player)
+    // Граф Hilt видит ListenableFuture из API MediaSession в :core:player.
+    implementation(libs.guava)
 }

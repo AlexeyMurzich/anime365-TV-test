@@ -12,7 +12,6 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -27,13 +26,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import okhttp3.OkHttpClient
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Видеопоток одного Перевода и подписи для уведомления: [subtitle] — «7 серия · AniLibria».
  * [hasPreviousEpisode] и [hasNextEpisode] — показывать ли в уведомлении ⏮ и ⏭.
+ * [cacheKey] — у скачанного ([EpisodeDownload.cacheKey]): видео читается из кэша без сети.
  */
 data class PlayerMedia(
     val videoUrl: String,
@@ -43,6 +42,7 @@ data class PlayerMedia(
     val artworkUrl: String?,
     val hasPreviousEpisode: Boolean = false,
     val hasNextEpisode: Boolean = false,
+    val cacheKey: String? = null,
 )
 
 private const val SEEK_INCREMENT_MS = 10_000L
@@ -60,7 +60,7 @@ class AnimePlayer
     @Inject
     internal constructor(
         @param:ApplicationContext private val context: Context,
-        private val client: OkHttpClient,
+        private val storage: DownloadStorage,
     ) : VideoPlayer {
         // OVERLAY_OPEN_GL: анимации и надписи с покадровым трекингом, рисует не в UI-потоке.
         private val assHandler = AssHandler(AssRenderType.OVERLAY_OPEN_GL)
@@ -149,10 +149,8 @@ class AnimePlayer
         }
 
         private fun build(): ExoPlayer {
-            val dataSource =
-                OkHttpDataSource.Factory(
-                    client.newBuilder().addNetworkInterceptor(GzipInterceptor).build(),
-                )
+            // Скачанное — из кэша Скачивания, остальное — из сети (DownloadStorage).
+            val dataSource = storage.playback
             val assParsers = AssSubtitleParserFactory(assHandler)
             val player =
                 ExoPlayer
@@ -188,6 +186,7 @@ class AnimePlayer
         }
     }
 
+@OptIn(UnstableApi::class)
 private fun PlayerMedia.toMediaItem(): MediaItem {
     val subtitles =
         subtitlesUrl?.let { url ->
@@ -202,6 +201,7 @@ private fun PlayerMedia.toMediaItem(): MediaItem {
     return MediaItem
         .Builder()
         .setUri(videoUrl)
+        .setCustomCacheKey(cacheKey)
         .setTag(this)
         .setSubtitleConfigurations(listOfNotNull(subtitles))
         .setMediaMetadata(

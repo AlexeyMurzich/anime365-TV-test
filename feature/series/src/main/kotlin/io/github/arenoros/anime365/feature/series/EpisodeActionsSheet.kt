@@ -1,5 +1,6 @@
 package io.github.arenoros.anime365.feature.series
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,17 +27,22 @@ import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
 import io.github.arenoros.anime365.core.model.Episode
 
-/** Долгое нажатие на серию в сетке; «Скачать» добавится вместе со Скачиванием (docs/roadmap.md, M4). */
+/**
+ * Долгое нажатие на серию в сетке (docs/screens.md): Скачать, Скачать эту и следующие — если после неё
+ * есть серии того же типа, — и отметка «просмотрено».
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun EpisodeActionsSheet(
     episode: Episode,
     watched: Boolean,
+    hasFollowing: Boolean,
+    onDownload: (following: Boolean) -> Unit,
     onSetWatched: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        EpisodeActions(episode, watched, onSetWatched, Modifier.navigationBarsPadding())
+        EpisodeActions(episode, watched, hasFollowing, onDownload, onSetWatched, Modifier.navigationBarsPadding())
     }
 }
 
@@ -44,6 +50,8 @@ internal fun EpisodeActionsSheet(
 internal fun EpisodeActions(
     episode: Episode,
     watched: Boolean,
+    hasFollowing: Boolean,
+    onDownload: (following: Boolean) -> Unit,
     onSetWatched: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -53,22 +61,37 @@ internal fun EpisodeActions(
             Modifier.padding(horizontal = KadrSpacing.Space4).semantics { heading() },
             style = MaterialTheme.typography.titleLarge,
         )
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = KadrLayout.TouchTarget)
-                .clickable(role = Role.Button, onClick = { onSetWatched(!watched) })
-                .padding(horizontal = KadrSpacing.Space4),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space4),
-        ) {
-            Icon(painterResource(if (watched) KadrIcons.Close else KadrIcons.Check), contentDescription = null)
-            Text(
-                stringResource(
-                    if (watched) R.string.feature_series_unmark_watched else R.string.feature_series_mark_watched,
-                ),
-                style = MaterialTheme.typography.bodyLarge,
-            )
+        ActionRow(KadrIcons.Download, stringResource(R.string.feature_series_download)) { onDownload(false) }
+        if (hasFollowing) {
+            ActionRow(KadrIcons.Download, stringResource(R.string.feature_series_download_following)) {
+                onDownload(true)
+            }
         }
+        ActionRow(
+            if (watched) KadrIcons.Close else KadrIcons.Check,
+            stringResource(
+                if (watched) R.string.feature_series_unmark_watched else R.string.feature_series_mark_watched,
+            ),
+        ) { onSetWatched(!watched) }
+    }
+}
+
+@Composable
+private fun ActionRow(
+    @DrawableRes icon: Int,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = KadrLayout.TouchTarget)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = KadrSpacing.Space4),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space4),
+    ) {
+        Icon(painterResource(icon), contentDescription = null)
+        Text(label, style = MaterialTheme.typography.bodyLarge)
     }
 }

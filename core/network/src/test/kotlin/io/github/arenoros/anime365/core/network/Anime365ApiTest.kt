@@ -134,6 +134,10 @@ class Anime365ApiTest {
 
             assertEquals(listOf(1080, 720, 360), embed.stream.map { it.height })
             assertEquals("/episodeTranslations/5987619.ass?willcache", embed.subtitlesUrl)
+            assertEquals(
+                "https://smotret-anime.co/translations/mp4/5987619?download=1&height=720",
+                embed.download.single { it.height == 720 }.url,
+            )
             val request = server.takeRequest()
             assertEquals("/api/translations/embed/5987619", request.url.encodedPath)
             assertEquals("secret", request.url.queryParameter("access_token"))

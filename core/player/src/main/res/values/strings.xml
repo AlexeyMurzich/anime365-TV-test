@@ -2,4 +2,5 @@
 <resources>
     <string name="core_player_previous_episode">Предыдущая серия</string>
     <string name="core_player_next_episode">Следующая серия</string>
+    <string name="core_player_downloads_channel">Скачивание</string>
 </resources>

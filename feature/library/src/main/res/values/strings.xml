@@ -13,6 +13,33 @@
     </plurals>
     <string name="feature_library_local_hint">Список хранится только на этом устройстве. Сохранить копию можно в Профиле → Экспорт Списка.</string>
     <string name="feature_library_hint_ok">Понятно</string>
+    <string name="feature_library_cancel">Отмена</string>
+
+    <string name="feature_library_downloads_tab">Скачанное</string>
+    <string name="feature_library_downloads_empty">Скачанного пока нет. Скачать серию — долгое нажатие на неё на странице аниме.</string>
+    <string name="feature_library_downloads_used">Занято %1$s</string>
+    <string name="feature_library_downloads_height">%1$dp</string>
+    <string name="feature_library_downloads_progress">%1$s · %2$d %% из %3$s</string>
+    <string name="feature_library_downloads_queued">В очереди</string>
+    <string name="feature_library_downloads_waiting_network">Ждёт сети</string>
+    <string name="feature_library_downloads_waiting_wifi">Ждёт Wi-Fi</string>
+    <string name="feature_library_downloads_failed">Не удалось скачать — коснитесь, чтобы повторить</string>
+    <string name="feature_library_downloads_select">Выбрать</string>
+    <string name="feature_library_downloads_remove">Удалить</string>
+    <string name="feature_library_downloads_remove_title">Удалить скачанное?</string>
+    <string name="feature_library_downloads_remove_one">%1$s · %2$s — освободится %3$s.</string>
+    <plurals name="feature_library_downloads_remove_many">
+        <item quantity="one">%1$d серия — освободится %2$s.</item>
+        <item quantity="few">%1$d серии — освободится %2$s.</item>
+        <item quantity="many">%1$d серий — освободится %2$s.</item>
+        <item quantity="other">%1$d серии — освободится %2$s.</item>
+    </plurals>
+    <plurals name="feature_library_downloads_selected">
+        <item quantity="one">Выбрана %d серия</item>
+        <item quantity="few">Выбраны %d серии</item>
+        <item quantity="many">Выбрано %d серий</item>
+        <item quantity="other">Выбрано %d серии</item>
+    </plurals>
 
     <string name="feature_library_channel_name">Новые серии</string>
     <string name="feature_library_channel_description">Вышли серии аниме со статусом «Смотрю»</string>

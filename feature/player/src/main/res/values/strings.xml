@@ -24,5 +24,8 @@
     <string name="feature_player_needs_subscription">Видео доступно с подпиской anime365</string>
     <string name="feature_player_log_in">Войти</string>
     <string name="feature_player_more">Подробнее</string>
+    <string name="feature_player_mini">Плеер в окне</string>
+    <string name="feature_player_expand">Развернуть</string>
+    <string name="feature_player_close">Закрыть Плеер</string>
     <string name="feature_player_no_same_team">У этой серии нет перевода той же команды</string>
 </resources>

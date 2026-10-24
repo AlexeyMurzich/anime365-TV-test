@@ -7,10 +7,12 @@ import io.github.arenoros.anime365.core.data.repository.LibraryRepository
 import io.github.arenoros.anime365.core.data.repository.RememberedTranslation
 import io.github.arenoros.anime365.core.data.repository.SeriesRepository
 import io.github.arenoros.anime365.core.model.Episode
+import io.github.arenoros.anime365.core.model.EpisodeDownload
 import io.github.arenoros.anime365.core.model.LibraryEntry
 import io.github.arenoros.anime365.core.model.LibraryStatus
 import io.github.arenoros.anime365.core.model.WatchAction
 import io.github.arenoros.anime365.core.model.watchAction
+import io.github.arenoros.anime365.core.player.EpisodeDownloads
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +29,7 @@ internal data class LibraryUiState(
     val entries: List<LibraryEntry>? = null,
     /** Пояснение «Список хранится только на этом устройстве» уже показали (ADR 0001). */
     val hintShown: Boolean = true,
+    val downloads: List<EpisodeDownload> = emptyList(),
 ) {
     fun of(status: LibraryStatus): List<LibraryEntry> = entries.orEmpty().filter { it.status == status }
 }
@@ -57,13 +60,19 @@ internal class LibraryViewModel
         private val library: LibraryRepository,
         private val series: SeriesRepository,
         private val rememberedTranslation: RememberedTranslation,
+        private val episodeDownloads: EpisodeDownloads,
     ) : ViewModel() {
         private val eventChannel = Channel<LibraryEvent>(Channel.BUFFERED)
         val events: Flow<LibraryEvent> = eventChannel.receiveAsFlow()
 
         val uiState: StateFlow<LibraryUiState> =
-            combine(library.entries(), library.hintShown, ::LibraryUiState)
+            combine(library.entries(), library.hintShown, episodeDownloads.downloads, ::LibraryUiState)
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), LibraryUiState())
+
+        fun retryDownload(download: EpisodeDownload) = episodeDownloads.retry(download.translation.id)
+
+        fun removeDownloads(downloads: List<EpisodeDownload>) =
+            episodeDownloads.remove(downloads.map { it.translation.id })
 
         fun dismissHint() {
             viewModelScope.launch { library.setHintShown() }
