@@ -39,18 +39,29 @@ class CatalogScreenScreenshotTest {
     @Test
     fun nothingFound() = capture("catalog_empty", emptyList(), filter, query = "абвгд")
 
+    @Test
+    fun adultSection() =
+        capture(
+            "catalog_hentai",
+            items.map { it.copy(isHentai = true, title = "Пример тайтла ${it.id}") },
+            filter.copy(isHentai = true),
+            adultContent = true,
+        )
+
     private fun capture(
         name: String,
         series: List<SeriesSummary>,
         filter: CatalogFilter,
         query: String = "",
         fontScale: Float = 1f,
+        adultContent: Boolean = false,
     ) = compose.captureScreen(name, fontScale) {
         val complete = LoadState.NotLoading(endOfPaginationReached = true)
         val pages = flowOf(PagingData.from(series, LoadStates(complete, complete, complete))).collectAsLazyPagingItems()
         CatalogScreen(
             query = query,
             filter = filter,
+            adultContent = adultContent,
             series = pages,
             focusSearch = false,
             onQueryChange = {},

@@ -10,6 +10,10 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,9 +59,11 @@ internal fun CatalogRoute(
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
+    val adultContent by viewModel.adultContent.collectAsStateWithLifecycle()
     CatalogScreen(
         query = query,
         filter = filter,
+        adultContent = adultContent,
         series = viewModel.series.collectAsLazyPagingItems(),
         focusSearch = key.focusSearch,
         onQueryChange = viewModel::onQueryChange,
@@ -72,6 +78,7 @@ internal fun CatalogRoute(
 internal fun CatalogScreen(
     query: String,
     filter: CatalogFilter,
+    adultContent: Boolean,
     series: LazyPagingItems<SeriesSummary>,
     focusSearch: Boolean,
     onQueryChange: (String) -> Unit,
@@ -87,6 +94,18 @@ internal fun CatalogScreen(
         containerColor = KadrTheme.palette.background,
     ) { padding ->
         Column(Modifier.padding(padding)) {
+            if (adultContent) {
+                SingleChoiceSegmentedButtonRow(Modifier.padding(horizontal = KadrSpacing.Space4)) {
+                    listOf(R.string.feature_catalog_section_anime, R.string.feature_catalog_section_hentai)
+                        .forEachIndexed { index, label ->
+                            SegmentedButton(
+                                selected = filter.isHentai == (index == 1),
+                                onClick = { onFilterChange(filter.copy(isHentai = index == 1)) },
+                                shape = SegmentedButtonDefaults.itemShape(index, 2),
+                            ) { Text(stringResource(label)) }
+                        }
+                }
+            }
             val focusRequester = remember { FocusRequester() }
             // Фокус — один раз: при возврате с экрана Аниме клавиатура не должна выскакивать снова.
             var focusRequested by rememberSaveable { mutableStateOf(false) }

@@ -31,6 +31,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -94,6 +95,10 @@ internal fun SeriesRoute(
         hiltViewModel<SeriesViewModel, SeriesViewModel.Factory>(creationCallback = { it.create(seriesId) }),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(state.blocked) {
+        if (state.blocked) onBack()
+    }
+    if (state.blocked) return
     val requestNotifications = rememberNotificationPermissionRequest()
     SeriesScreen(
         state = state,

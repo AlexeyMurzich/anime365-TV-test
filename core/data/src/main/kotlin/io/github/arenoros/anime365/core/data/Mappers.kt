@@ -47,6 +47,7 @@ internal fun SeriesDto.toEntity(): SeriesEntity? {
         score = myAnimeListScore?.takeIf { it > 0 },
         isAiring = isAiring == 1,
         isActive = isActive,
+        isHentai = isHentai == 1,
     )
 }
 
@@ -95,6 +96,7 @@ internal fun SeriesEntity.toSummary(): SeriesSummary =
         year = year,
         season = season,
         score = score,
+        isHentai = isHentai,
         status =
             when {
                 isActive == 0 -> ReleaseStatus.Announced
@@ -131,9 +133,9 @@ internal fun SeriesWithDetails.toModel(): Series =
             },
     )
 
-/** `null`, пока аниме этого Эпизода не загружено. */
+/** `null`, пока аниме этого Эпизода не загружено, и для аниме 18+: общая лента — только обычное аниме. */
 internal fun FeedEpisodeWithSeries.toModel(): FeedEpisode? =
-    series?.let { series ->
+    series?.takeUnless { it.isHentai }?.let { series ->
         FeedEpisode(
             episodeId = episode.episodeId,
             seriesId = series.id,
