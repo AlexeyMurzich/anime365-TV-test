@@ -54,14 +54,8 @@ internal class TvRemoteInput {
         onAction: (TvRemoteAction) -> Unit,
     ): Boolean {
         if (!isDown) return release(keyCode)
-        val action =
-            if (repeatCount > 0 &&
-                pressedKey == keyCode
-            ) {
-                pressedAction
-            } else {
-                tvRemoteAction(keyCode, controlsVisible)
-            }
+        val held = repeatCount > 0 && pressedKey == keyCode
+        val action = if (held) pressedAction else tvRemoteAction(keyCode, controlsVisible)
         val handled = action != TvRemoteAction.None
         if (handled) {
             pressedKey = keyCode

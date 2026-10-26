@@ -101,9 +101,10 @@ internal fun StatusOptions(
             }
         }
         if (status != null) {
-            TextButton(onClick = {
-                onSelect(null)
-            }, modifier = Modifier.padding(horizontal = KadrSpacing.Space2).tvFocusIndicator()) {
+            TextButton(
+                onClick = { onSelect(null) },
+                modifier = Modifier.padding(horizontal = KadrSpacing.Space2).tvFocusIndicator(),
+            ) {
                 Text(stringResource(R.string.feature_series_remove_from_list).uppercase())
             }
         }

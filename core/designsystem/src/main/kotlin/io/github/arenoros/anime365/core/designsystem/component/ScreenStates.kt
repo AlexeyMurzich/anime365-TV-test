@@ -71,10 +71,8 @@ fun EmptyState(
     onAction: () -> Unit = {},
 ) {
     MessageState(message, modifier) {
-        if (actionLabel !=
-            null
-        ) {
-            TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onAction) { Text(actionLabel.uppercase()) }
+        actionLabel?.let { label ->
+            TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onAction) { Text(label.uppercase()) }
         }
     }
 }

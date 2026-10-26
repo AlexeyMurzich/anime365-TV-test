@@ -111,15 +111,10 @@ internal fun PlayerRoute(
     val minimize by rememberUpdatedState(onMinimize)
     val collapse = remember { PlayerCollapse(miniPlayerBounds) { minimize() } }
     val scope = rememberCoroutineScope()
-    // «Назад» сворачивает Плеер в окно — тем же движением, что и свайп вниз; смотреть нечего — закрывает.
-    val leave: () -> Unit =
-        if (state.canMinimize &&
-            !television
-        ) {
-            ({ scope.launch { collapse.collapse() } })
-        } else {
-            onClose
-        }
+    // «Назад» сворачивает Плеер в окно — тем же движением, что и свайп вниз. Смотреть нечего или это
+    // телевизор, где окна нет, — закрывает.
+    val canCollapse = state.canMinimize && !television
+    val leave: () -> Unit = if (canCollapse) ({ scope.launch { collapse.collapse() } }) else onClose
     BackHandler(onBack = leave)
     PlayerScreen(
         state = state,

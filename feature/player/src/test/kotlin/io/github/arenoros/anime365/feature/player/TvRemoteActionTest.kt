@@ -2,6 +2,8 @@ package io.github.arenoros.anime365.feature.player
 
 import android.view.KeyEvent
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TvRemoteActionTest {
@@ -9,11 +11,11 @@ class TvRemoteActionTest {
     fun revealingControlsConsumesTheMatchingReleaseAndHeldOk() {
         val input = TvRemoteInput()
         val actions = mutableListOf<TvRemoteAction>()
-        org.junit.Assert.assertTrue(input.handle(KeyEvent.KEYCODE_DPAD_CENTER, true, 0, false, actions::add))
-        org.junit.Assert.assertTrue(input.handle(KeyEvent.KEYCODE_DPAD_CENTER, true, 1, true, actions::add))
-        org.junit.Assert.assertTrue(input.handle(KeyEvent.KEYCODE_DPAD_CENTER, false, 0, true, actions::add))
+        assertTrue(input.handle(KeyEvent.KEYCODE_DPAD_CENTER, true, 0, false, actions::add))
+        assertTrue(input.handle(KeyEvent.KEYCODE_DPAD_CENTER, true, 1, true, actions::add))
+        assertTrue(input.handle(KeyEvent.KEYCODE_DPAD_CENTER, false, 0, true, actions::add))
         assertEquals(listOf(TvRemoteAction.ShowControls), actions)
-        org.junit.Assert.assertFalse(input.handle(KeyEvent.KEYCODE_DPAD_CENTER, true, 0, true, actions::add))
+        assertFalse(input.handle(KeyEvent.KEYCODE_DPAD_CENTER, true, 0, true, actions::add))
     }
 
     @Test
@@ -35,12 +37,12 @@ class TvRemoteActionTest {
     fun backHidesControlsAndConsumesReleaseBeforeAllowingExit() {
         val input = TvRemoteInput()
         val actions = mutableListOf<TvRemoteAction>()
-        org.junit.Assert.assertTrue(input.handle(KeyEvent.KEYCODE_BACK, true, 0, true, actions::add))
-        org.junit.Assert.assertTrue(input.handle(KeyEvent.KEYCODE_BACK, true, 1, false, actions::add))
-        org.junit.Assert.assertTrue(input.handle(KeyEvent.KEYCODE_BACK, false, 0, false, actions::add))
+        assertTrue(input.handle(KeyEvent.KEYCODE_BACK, true, 0, true, actions::add))
+        assertTrue(input.handle(KeyEvent.KEYCODE_BACK, true, 1, false, actions::add))
+        assertTrue(input.handle(KeyEvent.KEYCODE_BACK, false, 0, false, actions::add))
         assertEquals(listOf(TvRemoteAction.HideControls), actions)
-        org.junit.Assert.assertFalse(input.handle(KeyEvent.KEYCODE_BACK, true, 0, false, actions::add))
-        org.junit.Assert.assertFalse(input.handle(KeyEvent.KEYCODE_BACK, false, 0, false, actions::add))
+        assertFalse(input.handle(KeyEvent.KEYCODE_BACK, true, 0, false, actions::add))
+        assertFalse(input.handle(KeyEvent.KEYCODE_BACK, false, 0, false, actions::add))
     }
 
     @Test
