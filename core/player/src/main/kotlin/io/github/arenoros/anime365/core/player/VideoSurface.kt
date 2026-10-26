@@ -1,6 +1,8 @@
 package io.github.arenoros.anime365.core.player
 
+import android.content.res.Configuration
 import android.graphics.Color
+import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -25,6 +27,14 @@ fun VideoSurface(
                 setShutterBackgroundColor(Color.BLACK)
                 setKeepContentOnPlayerReset(true)
                 this.player = player.player
+                // TV input belongs to the Compose controls, not PlayerView's hidden controller.
+                if (context.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK ==
+                    Configuration.UI_MODE_TYPE_TELEVISION
+                ) {
+                    isFocusable = false
+                    isFocusableInTouchMode = false
+                    descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+                }
                 // Субтитры libass есть только у настоящего плеера, не у тестового.
                 (player as? AnimePlayer)?.let { animePlayer -> subtitleView?.let(animePlayer::attach) }
             }

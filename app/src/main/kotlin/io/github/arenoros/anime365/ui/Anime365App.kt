@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
@@ -49,6 +50,7 @@ import io.github.arenoros.anime365.R
 import io.github.arenoros.anime365.core.designsystem.component.BottomSheetSceneStrategy
 import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationBar
 import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationBarItem
+import io.github.arenoros.anime365.core.designsystem.component.LocalTvContentCovered
 import io.github.arenoros.anime365.core.player.VideoPlayer
 import io.github.arenoros.anime365.feature.account.navigation.LoginKey
 import io.github.arenoros.anime365.feature.account.navigation.SettingsKey
@@ -111,35 +113,37 @@ internal fun Anime365App(
     Box(modifier) {
         // Под развёрнутым Плеером приложение остаётся на месте: свайп вниз сворачивает Плеер и
         // открывает его. Пока Плеер развёрнут, TalkBack не видит того, что под ним.
-        Scaffold(
-            modifier = if (player.expanded) Modifier.clearAndSetSemantics {} else Modifier,
-            bottomBar = {
-                if (!rememberIsInPictureInPicture()) {
-                    AppNavigationBar(
-                        current = current,
-                        newEpisodeCount = newEpisodeCount,
-                        onSelect = { destination ->
-                            // Повторное нажатие на активный таб возвращает к его корню.
-                            if (destination == current) {
-                                while (backStack.size > 1) backStack.removeLastOrNull()
-                            } else {
-                                current = destination
-                            }
-                        },
+        CompositionLocalProvider(LocalTvContentCovered provides player.expanded) {
+            Scaffold(
+                modifier = if (player.expanded) Modifier.clearAndSetSemantics {} else Modifier,
+                bottomBar = {
+                    if (!rememberIsInPictureInPicture()) {
+                        AppNavigationBar(
+                            current = current,
+                            newEpisodeCount = newEpisodeCount,
+                            onSelect = { destination ->
+                                // Повторное нажатие на активный таб возвращает к его корню.
+                                if (destination == current) {
+                                    while (backStack.size > 1) backStack.removeLastOrNull()
+                                } else {
+                                    current = destination
+                                }
+                            },
+                        )
+                    }
+                },
+                // Верхний отступ у каждого экрана свой: зелёная шапка заходит под статус-бар.
+                contentWindowInsets = WindowInsets(0),
+            ) { padding ->
+                Box {
+                    NavDisplay(
+                        entries = entries.getValue(current),
+                        modifier = Modifier.padding(padding).consumeWindowInsets(padding),
+                        sceneStrategies = sceneStrategies,
+                        onBack = { backStack.removeLastOrNull() },
                     )
+                    PlayerWindow(player, viewModel.videoPlayer, hiddenSeriesIds, Modifier.padding(padding))
                 }
-            },
-            // Верхний отступ у каждого экрана свой: зелёная шапка заходит под статус-бар.
-            contentWindowInsets = WindowInsets(0),
-        ) { padding ->
-            Box {
-                NavDisplay(
-                    entries = entries.getValue(current),
-                    modifier = Modifier.padding(padding).consumeWindowInsets(padding),
-                    sceneStrategies = sceneStrategies,
-                    onBack = { backStack.removeLastOrNull() },
-                )
-                PlayerWindow(player, viewModel.videoPlayer, hiddenSeriesIds, Modifier.padding(padding))
             }
         }
         PlayerLayer(player, playerEntries, sceneStrategies)
@@ -179,7 +183,10 @@ private fun PlayerLayer(
     AnimatedVisibility(player.expanded && entries.isNotEmpty(), enter = fadeIn(), exit = ExitTransition.None) {
         // Касания не проходят к приложению, даже где Плеер прозрачен посреди сворачивания.
         Box(Modifier.fillMaxSize().pointerInput(Unit) {}) {
-            NavDisplay(entries = entries, sceneStrategies = sceneStrategies, onBack = player::back)
+            // AnimatedVisibility may retain its content for a frame after the player stack is cleared.
+            if (entries.isNotEmpty()) {
+                NavDisplay(entries = entries, sceneStrategies = sceneStrategies, onBack = player::back)
+            }
         }
     }
 }

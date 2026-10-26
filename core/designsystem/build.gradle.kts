@@ -10,6 +10,7 @@ dependencies {
     api(libs.androidx.navigation3.ui)
     implementation(libs.androidx.annotation)
     implementation(libs.coil.compose)
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit)
 }

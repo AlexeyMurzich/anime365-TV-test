@@ -32,7 +32,7 @@ fun KadrTopAppBar(
         modifier = modifier,
         navigationIcon = {
             if (onBack != null) {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = onBack, modifier = Modifier.tvFocusIndicator()) {
                     if (closeIcon) {
                         Icon(painterResource(KadrIcons.Close), stringResource(R.string.core_designsystem_close))
                     } else {

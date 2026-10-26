@@ -56,7 +56,9 @@ fun ErrorState(
     modifier: Modifier = Modifier,
 ) {
     MessageState(message, modifier) {
-        Button(onClick = onRetry) { Text(stringResource(R.string.core_designsystem_retry).uppercase()) }
+        Button(modifier = Modifier.tvFocusIndicator(), onClick = onRetry) {
+            Text(stringResource(R.string.core_designsystem_retry).uppercase())
+        }
     }
 }
 
@@ -69,7 +71,11 @@ fun EmptyState(
     onAction: () -> Unit = {},
 ) {
     MessageState(message, modifier) {
-        if (actionLabel != null) TextButton(onClick = onAction) { Text(actionLabel.uppercase()) }
+        if (actionLabel !=
+            null
+        ) {
+            TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onAction) { Text(actionLabel.uppercase()) }
+        }
     }
 }
 

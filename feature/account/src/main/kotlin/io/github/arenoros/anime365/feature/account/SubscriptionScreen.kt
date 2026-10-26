@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.arenoros.anime365.core.data.repository.SiteLinks
 import io.github.arenoros.anime365.core.designsystem.component.KadrTopAppBar
 import io.github.arenoros.anime365.core.designsystem.component.errorMessage
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
 import io.github.arenoros.anime365.core.model.Account
@@ -80,10 +81,10 @@ internal fun SubscriptionScreen(
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
             )
-            Button(onClick = { uriHandler.openUri(SiteLinks.SITE) }) {
+            Button(modifier = Modifier.tvFocusIndicator(), onClick = { uriHandler.openUri(SiteLinks.SITE) }) {
                 Text(stringResource(R.string.feature_account_subscribe_on_site).uppercase())
             }
-            TextButton(onClick = onRefresh, enabled = !state.isRefreshing) {
+            TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onRefresh, enabled = !state.isRefreshing) {
                 Text(stringResource(R.string.feature_account_subscription_refresh).uppercase())
             }
             val error = state.error

@@ -22,6 +22,9 @@ class SettingsScreenshotTest {
     fun defaults() = settings("settings", AppSettings())
 
     @Test
+    fun darkDefaults() = settings("settings_dark", AppSettings(), darkTheme = true)
+
+    @Test
     fun adultEnabled() = settings("settings_adult", AppSettings(adultContent = true))
 
     @Test
@@ -32,7 +35,8 @@ class SettingsScreenshotTest {
         name: String,
         settings: AppSettings,
         fontScale: Float = 1f,
-    ) = compose.captureScreen(name, fontScale) {
+        darkTheme: Boolean = false,
+    ) = compose.captureScreen(name, fontScale, darkTheme) {
         SettingsScreen(settings, onUpdate = {}, onEnableNotifications = {}, onBack = {}, crashReportsAvailable = true)
     }
 }

@@ -59,7 +59,7 @@ fun RowScope.KadrNavigationBarItem(
             ) { Icon(painterResource(icon), contentDescription = null) }
         },
         label = { Text(label) },
-        modifier = modifier,
+        modifier = modifier.tvFocusIndicator(),
         colors =
             NavigationBarItemDefaults.colors(
                 selectedIconColor = colors.onPrimaryContainer,

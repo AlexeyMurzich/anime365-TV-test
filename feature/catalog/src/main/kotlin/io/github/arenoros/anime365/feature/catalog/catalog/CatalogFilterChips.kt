@@ -36,6 +36,8 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import io.github.arenoros.anime365.core.designsystem.component.tvAwareSheetDragHandle
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
@@ -68,15 +70,7 @@ internal fun CatalogFilterChips(
         horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space2),
     ) {
         DropdownChip(
-            label =
-                if (filter.types.isEmpty()) {
-                    stringResource(R.string.feature_catalog_filter_type)
-                } else {
-                    filter.types
-                        .sorted()
-                        .map { stringResource(it.label) }
-                        .joinToString(", ")
-                },
+            label = typesLabel(filter.types),
             selected = filter.types.isNotEmpty(),
             onClick = { sheet = FilterSheet.Types },
         )
@@ -97,6 +91,7 @@ internal fun CatalogFilterChips(
             onClick = { sheet = FilterSheet.Genres },
         )
         FilterChip(
+            modifier = Modifier.tvFocusIndicator(),
             selected = filter.ongoingOnly,
             onClick = { onFilterChange(filter.copy(ongoingOnly = !filter.ongoingOnly)) },
             label = { Text(stringResource(R.string.feature_catalog_filter_ongoing_only)) },
@@ -108,7 +103,9 @@ internal fun CatalogFilterChips(
                 },
         )
         if (!filter.isEmpty) {
-            TextButton(onClick = onReset) { Text(stringResource(R.string.feature_catalog_reset).uppercase()) }
+            TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onReset) {
+                Text(stringResource(R.string.feature_catalog_reset).uppercase())
+            }
         }
     }
     when (sheet) {
@@ -145,6 +142,7 @@ private fun DropdownChip(
     enabled: Boolean = true,
 ) {
     FilterChip(
+        modifier = Modifier.tvFocusIndicator(),
         selected = selected,
         onClick = onClick,
         label = { Text(label) },
@@ -160,7 +158,11 @@ private fun FilterSheet(
     onDismiss: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = KadrTheme.palette.surface) {
+    ModalBottomSheet(
+        dragHandle = tvAwareSheetDragHandle(),
+        onDismissRequest = onDismiss,
+        containerColor = KadrTheme.palette.surface,
+    ) {
         Text(
             title,
             Modifier.padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space2),
@@ -183,6 +185,7 @@ private fun TypesSheet(
         ) {
             SeriesType.entries.forEach { type ->
                 FilterChip(
+                    modifier = Modifier.tvFocusIndicator(),
                     selected = type in filter.types,
                     onClick = { onFilterChange(filter.copy(types = filter.types.toggle(type))) },
                     label = { Text(stringResource(type.label)) },
@@ -265,6 +268,7 @@ private fun GenresSheet(
                 ) {
                     genres.forEach { (id, title) ->
                         FilterChip(
+                            modifier = Modifier.tvFocusIndicator(),
                             selected = id in filter.genreIds,
                             onClick = { onFilterChange(filter.copy(genreIds = filter.genreIds.toggle(id))) },
                             label = { Text(title) },
@@ -350,3 +354,11 @@ private val Season.label: Int
             Season.Summer -> R.string.feature_catalog_season_summer
             Season.Autumn -> R.string.feature_catalog_season_autumn
         }
+
+@Composable
+private fun typesLabel(types: Set<SeriesType>): String =
+    if (types.isEmpty()) {
+        stringResource(R.string.feature_catalog_filter_type)
+    } else {
+        types.sorted().map { stringResource(it.label) }.joinToString(", ")
+    }
