@@ -62,6 +62,7 @@ fun EpisodeButton(
     Box(
         modifier
             .heightIn(min = KadrLayout.TouchTarget)
+            .tvFocusIndicator()
             .clip(MaterialTheme.shapes.small)
             .background(if (current) palette.primaryContainer else palette.surfaceVariant)
             .then(

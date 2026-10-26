@@ -22,6 +22,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import io.github.arenoros.anime365.core.designsystem.component.tvAwareSheetDragHandle
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
@@ -41,7 +43,7 @@ internal fun EpisodeActionsSheet(
     onSetWatched: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(dragHandle = tvAwareSheetDragHandle(), onDismissRequest = onDismiss) {
         EpisodeActions(episode, watched, hasFollowing, onDownload, onSetWatched, Modifier.navigationBarsPadding())
     }
 }
@@ -86,6 +88,7 @@ private fun ActionRow(
         Modifier
             .fillMaxWidth()
             .heightIn(min = KadrLayout.TouchTarget)
+            .tvFocusIndicator()
             .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = KadrSpacing.Space4),
         verticalAlignment = Alignment.CenterVertically,

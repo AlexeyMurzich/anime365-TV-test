@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import io.github.arenoros.anime365.core.designsystem.component.EmptyState
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
@@ -153,8 +154,12 @@ private fun SelectionBar(
             Modifier.weight(1f),
             style = MaterialTheme.typography.bodyLarge,
         )
-        TextButton(onClick = onCancel) { Text(stringResource(R.string.feature_library_cancel).uppercase()) }
-        TextButton(onClick = onRemove) { Text(stringResource(R.string.feature_library_downloads_remove).uppercase()) }
+        TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onCancel) {
+            Text(stringResource(R.string.feature_library_cancel).uppercase())
+        }
+        TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onRemove) {
+            Text(stringResource(R.string.feature_library_downloads_remove).uppercase())
+        }
     }
 }
 
@@ -326,12 +331,14 @@ private fun RemoveDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onConfirm) {
                 Text(stringResource(R.string.feature_library_downloads_remove).uppercase())
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.feature_library_cancel).uppercase()) }
+            TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onDismiss) {
+                Text(stringResource(R.string.feature_library_cancel).uppercase())
+            }
         },
     )
 }

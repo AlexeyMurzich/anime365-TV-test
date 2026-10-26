@@ -40,12 +40,12 @@ fun KadrSearchField(
     TextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().tvFocusIndicator(),
         placeholder = { Text(placeholder) },
         leadingIcon = { Icon(painterResource(KadrIcons.Search), contentDescription = null) },
         trailingIcon = {
             if (value.isNotEmpty()) {
-                IconButton(onClick = { onValueChange("") }) {
+                IconButton(modifier = Modifier.tvFocusIndicator(), onClick = { onValueChange("") }) {
                     Icon(painterResource(KadrIcons.Close), stringResource(R.string.core_designsystem_clear))
                 }
             }
@@ -76,7 +76,7 @@ fun KadrSearchButton(
             modifier
                 .fillMaxWidth()
                 .heightIn(min = KadrLayout.TouchTarget)
-                .clickable(role = Role.Button, onClick = onClick),
+                .tvClickable(role = Role.Button, onClick = onClick),
         shape = MaterialTheme.shapes.small,
         color = KadrTheme.palette.surface,
         contentColor = KadrTheme.palette.inkMuted,

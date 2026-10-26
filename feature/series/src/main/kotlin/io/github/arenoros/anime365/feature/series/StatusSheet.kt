@@ -24,6 +24,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import io.github.arenoros.anime365.core.designsystem.component.tvAwareSheetDragHandle
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
@@ -37,7 +39,7 @@ internal fun LibraryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    OutlinedButton(onClick = onClick, modifier = modifier) {
+    OutlinedButton(onClick = onClick, modifier = modifier.tvFocusIndicator()) {
         Icon(
             painterResource(if (status == null) KadrIcons.BookmarkBorder else KadrIcons.Bookmark),
             contentDescription = null,
@@ -57,7 +59,7 @@ internal fun StatusSheet(
     onSelect: (LibraryStatus?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(dragHandle = tvAwareSheetDragHandle(), onDismissRequest = onDismiss) {
         StatusOptions(status, onSelect, Modifier.navigationBarsPadding())
     }
 }
@@ -88,7 +90,7 @@ internal fun StatusOptions(
                         ).padding(horizontal = KadrSpacing.Space4),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RadioButton(selected = option == status, onClick = null)
+                    RadioButton(modifier = Modifier.tvFocusIndicator(), selected = option == status, onClick = null)
                     Text(
                         option.label(),
                         Modifier.padding(start = KadrSpacing.Space4),
@@ -98,7 +100,9 @@ internal fun StatusOptions(
             }
         }
         if (status != null) {
-            TextButton(onClick = { onSelect(null) }, Modifier.padding(horizontal = KadrSpacing.Space2)) {
+            TextButton(onClick = {
+                onSelect(null)
+            }, modifier = Modifier.padding(horizontal = KadrSpacing.Space2).tvFocusIndicator()) {
                 Text(stringResource(R.string.feature_series_remove_from_list).uppercase())
             }
         }

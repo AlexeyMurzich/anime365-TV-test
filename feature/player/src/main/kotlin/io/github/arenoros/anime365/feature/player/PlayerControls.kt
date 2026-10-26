@@ -1,10 +1,12 @@
 package io.github.arenoros.anime365.feature.player
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,10 +40,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -55,6 +65,9 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.PlayPauseButtonState
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import androidx.media3.ui.compose.state.rememberProgressStateWithTickInterval
+import io.github.arenoros.anime365.core.designsystem.component.isTelevision
+import io.github.arenoros.anime365.core.designsystem.component.tvAwareSheetDragHandle
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrRadius
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
@@ -93,12 +106,21 @@ internal fun PlayerControls(
     onPlayNext: () -> Unit,
     modifier: Modifier = Modifier,
     initiallyVisible: Boolean = true,
+    active: Boolean = true,
 ) {
     val playPause = rememberPlayPauseButtonState(player)
     var visible by remember { mutableStateOf(initiallyVisible) }
     val playing = !playPause.showPlay
-    LaunchedEffect(visible, playing) {
-        if (visible && playing) {
+    val television = isTelevision()
+    val surfaceFocus = remember { FocusRequester() }
+    val playFocus = remember { FocusRequester() }
+    var interaction by remember { mutableStateOf(0) }
+    var controlsHaveFocus by remember { mutableStateOf(false) }
+    val inputReady = !television || controlsHaveFocus
+    BackHandler(enabled = television && visible) { visible = false }
+    RequestPlayerControlsFocus(television && active, if (visible) playFocus else surfaceFocus, controlsHaveFocus)
+    LaunchedEffect(visible, playing, interaction, inputReady) {
+        if (visible && playing && inputReady) {
             delay(HIDE_CONTROLS_MS)
             visible = false
         }
@@ -106,27 +128,92 @@ internal fun PlayerControls(
     Box(
         modifier
             .fillMaxSize()
-            .pointerInput(player) {
-                detectTapGestures(
-                    onTap = { visible = !visible },
-                    onDoubleTap = { offset ->
-                        when {
-                            offset.x < size.width * EDGE_FRACTION -> player?.seekBack()
-                            offset.x > size.width * (1 - EDGE_FRACTION) -> player?.seekForward()
-                        }
-                    },
-                )
-            },
+            .then(
+                if (television) {
+                    Modifier.tvPlayerInput(
+                        player,
+                        playPause,
+                        visible,
+                        surfaceFocus,
+                        onHasFocus = { controlsHaveFocus = it },
+                        onInteraction = { interaction++ },
+                        onShowControls = { visible = true },
+                        onHideControls = { visible = false },
+                    )
+                } else {
+                    Modifier
+                },
+            ).playerTouchInput(player) { visible = !visible },
     ) {
-        AnimatedVisibility(visible, enter = fadeIn(), exit = fadeOut()) {
+        PlayerControlsVisibility(visible, television) {
             Box(Modifier.fillMaxSize().background(Scrim)) {
                 TopBar(state, onBack, onChooseTranslation, onOpenSettings)
-                CenterControls(state, player, playPause, onPlayPrevious, onPlayNext)
+                CenterControls(
+                    state,
+                    player,
+                    playPause,
+                    onPlayPrevious,
+                    onPlayNext,
+                    if (television) playFocus else null,
+                )
                 BottomBar(state, player, fullscreen, onToggleFullscreen)
             }
         }
     }
 }
+
+@Composable
+private fun RequestPlayerControlsFocus(
+    television: Boolean,
+    requester: FocusRequester,
+    hasFocus: Boolean,
+) {
+    val windowFocused = LocalWindowInfo.current.isWindowFocused
+    LaunchedEffect(television, requester, windowFocused) {
+        if (television && windowFocused) {
+            withFrameNanos { }
+            requester.requestFocus()
+        }
+    }
+    // Android may clear focus once more after disposing a dialog. Recover while this layer is active.
+    LaunchedEffect(television, windowFocused, hasFocus) {
+        if (television && windowFocused && !hasFocus) {
+            withFrameNanos { }
+            requester.requestFocus()
+        }
+    }
+}
+
+/** Remove hidden TV controls immediately so their focus targets cannot survive an exit animation. */
+@Composable
+private fun PlayerControlsVisibility(
+    visible: Boolean,
+    television: Boolean,
+    content: @Composable () -> Unit,
+) {
+    if (television) {
+        if (visible) content()
+    } else {
+        AnimatedVisibility(visible, enter = fadeIn(), exit = fadeOut()) { content() }
+    }
+}
+
+@OptIn(UnstableApi::class)
+private fun Modifier.playerTouchInput(
+    player: Player?,
+    onToggle: () -> Unit,
+): Modifier =
+    pointerInput(player) {
+        detectTapGestures(
+            onTap = { onToggle() },
+            onDoubleTap = { offset ->
+                when {
+                    offset.x < size.width * EDGE_FRACTION -> player?.seekBack()
+                    offset.x > size.width * (1 - EDGE_FRACTION) -> player?.seekForward()
+                }
+            },
+        )
+    }
 
 /** Соседние серии, перемотка и пауза; серии нет — кнопка неактивна. */
 @OptIn(UnstableApi::class)
@@ -137,6 +224,7 @@ private fun BoxScope.CenterControls(
     playPause: PlayPauseButtonState,
     onPlayPrevious: () -> Unit,
     onPlayNext: () -> Unit,
+    playFocus: FocusRequester?,
 ) {
     Row(
         Modifier.align(Alignment.Center),
@@ -160,6 +248,7 @@ private fun BoxScope.CenterControls(
                     if (playPause.showPlay) R.string.feature_player_play else R.string.feature_player_pause,
                 ),
             iconSize = 56.dp,
+            modifier = if (playFocus != null) Modifier.focusRequester(playFocus) else Modifier,
             onClick = playPause::onClick,
         )
         ControlButton(
@@ -228,7 +317,7 @@ private fun BoxScope.BottomBar(
                 val description = stringResource(R.string.feature_player_skip_opening_description)
                 TextButton(
                     onClick = { player?.let { it.seekTo(it.currentPosition + SKIP_OPENING_MS) } },
-                    modifier = Modifier.semantics { contentDescription = description },
+                    modifier = Modifier.tvFocusIndicator().semantics { contentDescription = description },
                 ) { Text(stringResource(R.string.feature_player_skip_opening), color = Color.White) }
             }
             state.quality?.let { height ->
@@ -280,7 +369,7 @@ private fun SeekBar(
                 dragging = null
             },
             enabled = durationMs > 0,
-            modifier = Modifier.semantics { contentDescription = positionDescription },
+            modifier = Modifier.tvFocusIndicator().semantics { contentDescription = positionDescription },
             colors =
                 SliderDefaults.colors(
                     thumbColor = Color.White,
@@ -296,11 +385,16 @@ private fun SeekBar(
 private fun ControlButton(
     icon: Int,
     description: String,
+    modifier: Modifier = Modifier,
     iconSize: Dp = 28.dp,
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick, modifier = Modifier.size(iconSize + KadrSpacing.Space4), enabled = enabled) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier.size(iconSize + KadrSpacing.Space4).tvFocusIndicator(),
+        enabled = enabled,
+    ) {
         Icon(
             painterResource(icon),
             contentDescription = description,
@@ -326,9 +420,11 @@ internal fun NextEpisodeCard(
     ) {
         Row(Modifier.padding(start = KadrSpacing.Space4), verticalAlignment = Alignment.CenterVertically) {
             TextButton(
+                modifier = Modifier.tvFocusIndicator(),
                 onClick = onPlayNow,
             ) { Text(stringResource(R.string.feature_player_next_in, seconds), color = Color.White) }
             TextButton(
+                modifier = Modifier.tvFocusIndicator(),
                 onClick = onCancel,
             ) { Text(stringResource(R.string.feature_player_cancel).uppercase(), color = Color.White) }
         }
@@ -345,7 +441,7 @@ internal fun PlayerSettingsSheet(
     onSubtitlesChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(dragHandle = tvAwareSheetDragHandle(), onDismissRequest = onDismiss) {
         Column(
             Modifier.padding(horizontal = KadrSpacing.Space4).navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(KadrSpacing.Space2),
@@ -354,6 +450,7 @@ internal fun PlayerSettingsSheet(
             FlowRow(horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space2)) {
                 state.qualities.forEach { height ->
                     FilterChip(
+                        modifier = Modifier.tvFocusIndicator(),
                         selected = height == state.quality,
                         onClick = { onSelectQuality(height) },
                         label = { Text(stringResource(R.string.feature_player_height, height)) },
@@ -364,6 +461,7 @@ internal fun PlayerSettingsSheet(
             FlowRow(horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space2)) {
                 SPEEDS.forEach { speed ->
                     FilterChip(
+                        modifier = Modifier.tvFocusIndicator(),
                         selected = speed == state.speed,
                         onClick = { onSelectSpeed(speed) },
                         label = { Text(stringResource(R.string.feature_player_speed_value, formatSpeed(speed))) },
@@ -373,7 +471,11 @@ internal fun PlayerSettingsSheet(
             if (state.hasSubtitles) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     SettingTitle(stringResource(R.string.feature_player_subtitles), Modifier.weight(1f))
-                    Switch(checked = state.subtitlesEnabled, onCheckedChange = onSubtitlesChange)
+                    Switch(
+                        modifier = Modifier.tvFocusIndicator(),
+                        checked = state.subtitlesEnabled,
+                        onCheckedChange = onSubtitlesChange,
+                    )
                 }
             }
             Spacer(Modifier.padding(bottom = KadrSpacing.Space4))

@@ -45,7 +45,7 @@ fun PosterCard(
     Column(
         modifier
             .clip(MaterialTheme.shapes.small)
-            .clickable(onClick = onClick),
+            .tvClickable(onClick = onClick),
     ) {
         PosterArt(imageUrl, score, status, progress)
         Text(

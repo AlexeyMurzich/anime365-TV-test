@@ -33,7 +33,9 @@ fun SectionHeader(
             style = MaterialTheme.typography.titleMedium,
         )
         if (onShowAll != null) {
-            TextButton(onClick = onShowAll) { Text(stringResource(R.string.core_designsystem_all).uppercase()) }
+            TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onShowAll) {
+                Text(stringResource(R.string.core_designsystem_all).uppercase())
+            }
         }
     }
 }

@@ -46,7 +46,9 @@ private class BottomSheetScene<T : Any>(
 
     override val content: @Composable () -> Unit = {
         val state = rememberModalBottomSheetState(skipPartiallyExpanded = true).also { sheetState = it }
-        ModalBottomSheet(onDismissRequest = onBack, sheetState = state) { entry.Content() }
+        ModalBottomSheet(dragHandle = tvAwareSheetDragHandle(), onDismissRequest = onBack, sheetState = state) {
+            entry.Content()
+        }
     }
 
     /** Лист уезжает вниз, прежде чем исчезнуть, а не пропадает мгновенно. */

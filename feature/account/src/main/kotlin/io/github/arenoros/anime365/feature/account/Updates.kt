@@ -20,6 +20,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.arenoros.anime365.core.data.repository.AppUpdate
 import io.github.arenoros.anime365.core.data.repository.UpdateRepository
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -77,13 +78,15 @@ internal fun UpdateDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
+            TextButton(modifier = Modifier.tvFocusIndicator(), onClick = {
                 uriHandler.openUri(update.url)
                 onDismiss()
             }) { Text(stringResource(R.string.feature_account_update).uppercase()) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.feature_account_update_later).uppercase()) }
+            TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onDismiss) {
+                Text(stringResource(R.string.feature_account_update_later).uppercase())
+            }
         },
     )
 }

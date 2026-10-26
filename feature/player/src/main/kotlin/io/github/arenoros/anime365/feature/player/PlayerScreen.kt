@@ -56,6 +56,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import io.github.arenoros.anime365.core.designsystem.component.errorMessage
+import io.github.arenoros.anime365.core.designsystem.component.isTelevision
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
@@ -105,11 +107,19 @@ internal fun PlayerRoute(
         viewModel.retryIfBlocked()
         onPauseOrDispose { viewModel.saveNow() }
     }
+    val television = isTelevision()
     val minimize by rememberUpdatedState(onMinimize)
     val collapse = remember { PlayerCollapse(miniPlayerBounds) { minimize() } }
     val scope = rememberCoroutineScope()
     // «Назад» сворачивает Плеер в окно — тем же движением, что и свайп вниз; смотреть нечего — закрывает.
-    val leave: () -> Unit = if (state.canMinimize) ({ scope.launch { collapse.collapse() } }) else onClose
+    val leave: () -> Unit =
+        if (state.canMinimize &&
+            !television
+        ) {
+            ({ scope.launch { collapse.collapse() } })
+        } else {
+            onClose
+        }
     BackHandler(onBack = leave)
     PlayerScreen(
         state = state,
@@ -195,6 +205,7 @@ internal fun PlayerScreen(
                     toggleFullscreen,
                     { settingsOpen = true },
                     Modifier.fillMaxSize(),
+                    controlsActive = !settingsOpen,
                 )
             }
 
@@ -268,6 +279,7 @@ private fun Video(
     onToggleFullscreen: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier,
+    controlsActive: Boolean = true,
     overlayAlpha: () -> Float = { 1f },
 ) {
     Box(modifier) {
@@ -292,6 +304,7 @@ private fun Video(
                             onToggleFullscreen = onToggleFullscreen,
                             onPlayPrevious = actions.onPlayPrevious,
                             onPlayNext = actions.onPlayNext,
+                            active = controlsActive,
                         )
                     }
                 }
@@ -345,7 +358,7 @@ private fun BoxScope.Message(
         verticalArrangement = Arrangement.spacedBy(KadrSpacing.Space4),
     ) {
         Text(text, color = Color.White, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
-        Button(onClick = onAction) { Text(action.uppercase()) }
+        Button(modifier = Modifier.tvFocusIndicator(), onClick = onAction) { Text(action.uppercase()) }
     }
 }
 
@@ -355,37 +368,19 @@ private fun PortraitDetails(
     actions: PlayerActions,
     modifier: Modifier,
 ) {
+    val chooseTranslation: () -> Unit = { state.episode?.let { actions.onChooseTranslation(it.id) } }
     // Табов на Плеере нет: отступ от системной навигации — сам.
     Column(
         modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(vertical = KadrSpacing.Space4),
         verticalArrangement = Arrangement.spacedBy(KadrSpacing.Space3),
     ) {
-        Column(Modifier.padding(horizontal = KadrSpacing.Space4)) {
-            Text(
-                state.series
-                    ?.summary
-                    ?.title
-                    .orEmpty(),
-                style = MaterialTheme.typography.titleLarge,
-                color = KadrTheme.palette.ink,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                listOfNotNull(
-                    state.episode?.label,
-                    state.translation?.team?.takeIf { it.isNotEmpty() },
-                ).joinToString(" · "),
-                style = MaterialTheme.typography.bodyMedium,
-                color = KadrTheme.palette.inkMuted,
-            )
-        }
+        PortraitHeading(state)
         // FlowRow: при крупном шрифте вторая кнопка уходит на новую строку, а не рвётся по слогам.
         FlowRow(
             Modifier.padding(horizontal = KadrSpacing.Space4),
             horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space2),
         ) {
-            OutlinedButton(onClick = { state.episode?.let { actions.onChooseTranslation(it.id) } }) {
+            OutlinedButton(modifier = Modifier.tvFocusIndicator(), onClick = chooseTranslation) {
                 Icon(painterResource(KadrIcons.Translate), contentDescription = null)
                 Text(
                     stringResource(R.string.feature_player_translation).uppercase(),
@@ -393,7 +388,7 @@ private fun PortraitDetails(
                 )
             }
             if (state.nextEpisode != null) {
-                OutlinedButton(onClick = actions.onPlayNext) {
+                OutlinedButton(modifier = Modifier.tvFocusIndicator(), onClick = actions.onPlayNext) {
                     Icon(painterResource(KadrIcons.SkipNext), contentDescription = null)
                     Text(
                         stringResource(R.string.feature_player_next_episode).uppercase(),
@@ -413,5 +408,29 @@ private fun PortraitDetails(
                 currentEpisodeId = state.episode?.id,
             )
         }
+    }
+}
+
+@Composable
+private fun PortraitHeading(state: PlayerUiState) {
+    Column(Modifier.padding(horizontal = KadrSpacing.Space4)) {
+        Text(
+            state.series
+                ?.summary
+                ?.title
+                .orEmpty(),
+            style = MaterialTheme.typography.titleLarge,
+            color = KadrTheme.palette.ink,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            listOfNotNull(
+                state.episode?.label,
+                state.translation?.team?.takeIf { it.isNotEmpty() },
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.bodyMedium,
+            color = KadrTheme.palette.inkMuted,
+        )
     }
 }
