@@ -31,6 +31,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +65,8 @@ import io.github.arenoros.anime365.core.designsystem.component.StaleDataBanner
 import io.github.arenoros.anime365.core.designsystem.component.StatusBadge
 import io.github.arenoros.anime365.core.designsystem.component.errorMessage
 import io.github.arenoros.anime365.core.designsystem.component.skeleton
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
+import io.github.arenoros.anime365.core.designsystem.component.tvInitialFocus
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
@@ -94,6 +97,10 @@ internal fun SeriesRoute(
         hiltViewModel<SeriesViewModel, SeriesViewModel.Factory>(creationCallback = { it.create(seriesId) }),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(state.blocked) {
+        if (state.blocked) onBack()
+    }
+    if (state.blocked) return
     val requestNotifications = rememberNotificationPermissionRequest()
     SeriesScreen(
         state = state,
@@ -275,6 +282,7 @@ private fun Tabs(
                     R.string.feature_series_tab_episodes
                 }
             Tab(
+                modifier = Modifier.tvFocusIndicator(),
                 selected = selected == entry,
                 onClick = { onSelect(entry) },
                 text = { Text(stringResource(label).uppercase()) },
@@ -335,7 +343,7 @@ private fun WatchButton(
                 is WatchAction.Start -> onOpenEpisode(action.episode.id)
             }
         },
-        modifier = modifier,
+        modifier = modifier.tvInitialFocus().tvFocusIndicator(),
     ) {
         Icon(painterResource(KadrIcons.PlayArrow), contentDescription = null)
         Text(
@@ -414,6 +422,7 @@ private fun LazyListScope.description(details: SeriesDetails) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space2)) {
                     details.descriptions.forEachIndexed { index, description ->
                         FilterChip(
+                            modifier = Modifier.tvFocusIndicator(),
                             selected = index == source,
                             onClick = { source = index },
                             label = { Text(description.source) },
@@ -441,7 +450,10 @@ private fun LazyListScope.description(details: SeriesDetails) {
         val uriHandler = LocalUriHandler.current
         FlowRow(Modifier.padding(horizontal = KadrSpacing.Space2)) {
             details.links.forEach { link ->
-                TextButton(onClick = { uriHandler.openUri(link.url) }) { Text(link.title) }
+                TextButton(
+                    modifier = Modifier.tvFocusIndicator(),
+                    onClick = { uriHandler.openUri(link.url) },
+                ) { Text(link.title) }
             }
         }
     }
@@ -454,7 +466,7 @@ private fun SiteMenu(siteUrl: String) {
     val uriHandler = LocalUriHandler.current
     val shareTitle = stringResource(R.string.feature_series_share)
     Box {
-        IconButton(onClick = { expanded = true }) {
+        IconButton(modifier = Modifier.tvFocusIndicator(), onClick = { expanded = true }) {
             Icon(painterResource(KadrIcons.MoreVert), stringResource(R.string.feature_series_more))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {

@@ -57,7 +57,7 @@ fun RankingListItem(
     Row(
         modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .tvClickable(onClick = onClick)
             .padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space3),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space3),
@@ -92,7 +92,7 @@ fun EpisodeFeedRow(
     Row(
         modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .tvClickable(onClick = onClick)
             .padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space2),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space3),
@@ -145,7 +145,7 @@ fun LibraryListItem(
     Row(
         modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .tvClickable(onClick = onClick)
             .padding(
                 start = KadrSpacing.Space4,
                 end = KadrSpacing.Space2,
@@ -167,7 +167,7 @@ fun LibraryListItem(
                 contentColor = KadrTheme.palette.onPrimary,
             ) { Text(badge) }
         }
-        IconButton(onClick = onAction) {
+        IconButton(onClick = onAction, modifier = Modifier.tvFocusIndicator()) {
             Icon(painterResource(actionIcon), contentDescription = actionLabel)
         }
     }

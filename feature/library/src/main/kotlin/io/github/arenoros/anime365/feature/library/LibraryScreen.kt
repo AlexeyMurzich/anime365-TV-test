@@ -32,6 +32,7 @@ import io.github.arenoros.anime365.core.designsystem.component.EmptyState
 import io.github.arenoros.anime365.core.designsystem.component.KadrTopAppBar
 import io.github.arenoros.anime365.core.designsystem.component.LibraryListItem
 import io.github.arenoros.anime365.core.designsystem.component.ListItemPlaceholder
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
@@ -106,12 +107,14 @@ internal fun LibraryScreen(
             ) {
                 LibraryStatus.entries.forEach { entry ->
                     Tab(
+                        modifier = Modifier.tvFocusIndicator(),
                         selected = status == entry,
                         onClick = { tab = entry.ordinal },
                         text = { Text(entry.label().uppercase()) },
                     )
                 }
                 Tab(
+                    modifier = Modifier.tvFocusIndicator(),
                     selected = status == null,
                     onClick = { tab = LibraryStatus.entries.size },
                     text = { Text(stringResource(R.string.feature_library_downloads_tab).uppercase()) },
@@ -185,7 +188,9 @@ private fun LocalOnlyHint(onDismiss: () -> Unit) {
         Column(Modifier.padding(start = KadrSpacing.Space4, top = KadrSpacing.Space4, end = KadrSpacing.Space2)) {
             Text(stringResource(R.string.feature_library_local_hint), style = MaterialTheme.typography.bodyMedium)
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.feature_library_hint_ok).uppercase()) }
+                TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onDismiss) {
+                    Text(stringResource(R.string.feature_library_hint_ok).uppercase())
+                }
             }
         }
     }

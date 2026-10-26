@@ -49,6 +49,7 @@ import io.github.arenoros.anime365.core.data.repository.ImportMode
 import io.github.arenoros.anime365.core.data.repository.LibraryFileSummary
 import io.github.arenoros.anime365.core.data.repository.SiteLinks
 import io.github.arenoros.anime365.core.designsystem.component.KadrTopAppBar
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
@@ -247,13 +248,15 @@ private fun ImportModeDialog(
         text = { Text(stringResource(R.string.feature_account_import_text)) },
         confirmButton = {
             Column(horizontalAlignment = Alignment.End) {
-                TextButton(onClick = { onSelect(ImportMode.Merge) }) {
+                TextButton(modifier = Modifier.tvFocusIndicator(), onClick = { onSelect(ImportMode.Merge) }) {
                     Text(stringResource(R.string.feature_account_import_merge).uppercase())
                 }
-                TextButton(onClick = { onSelect(ImportMode.Replace) }) {
+                TextButton(modifier = Modifier.tvFocusIndicator(), onClick = { onSelect(ImportMode.Replace) }) {
                     Text(stringResource(R.string.feature_account_import_replace).uppercase())
                 }
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.feature_account_cancel).uppercase()) }
+                TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onDismiss) {
+                    Text(stringResource(R.string.feature_account_cancel).uppercase())
+                }
             }
         },
     )
@@ -262,7 +265,9 @@ private fun ImportModeDialog(
 @Composable
 private fun Guest(onLogin: () -> Unit) {
     Text(stringResource(R.string.feature_account_guest_hint), style = MaterialTheme.typography.bodyLarge)
-    Button(onClick = onLogin) { Text(stringResource(R.string.feature_account_log_in).uppercase()) }
+    Button(modifier = Modifier.tvFocusIndicator(), onClick = onLogin) {
+        Text(stringResource(R.string.feature_account_log_in).uppercase())
+    }
 }
 
 @Composable
@@ -274,7 +279,7 @@ private fun User(
 ) {
     Text(user.name, style = MaterialTheme.typography.headlineSmall)
     SubscriptionStatus(user, now, zone)
-    TextButton(onClick = onLogOut) {
+    TextButton(modifier = Modifier.tvFocusIndicator(), onClick = onLogOut) {
         Icon(painterResource(KadrIcons.Logout), contentDescription = null, Modifier.padding(end = 8.dp))
         Text(stringResource(R.string.feature_account_log_out).uppercase())
     }
@@ -297,7 +302,7 @@ internal fun SubscriptionStatus(
     } else {
         val uriHandler = LocalUriHandler.current
         Text(stringResource(R.string.feature_account_no_subscription), style = MaterialTheme.typography.bodyLarge)
-        OutlinedButton(onClick = { uriHandler.openUri(SiteLinks.SITE) }) {
+        OutlinedButton(modifier = Modifier.tvFocusIndicator(), onClick = { uriHandler.openUri(SiteLinks.SITE) }) {
             Text(stringResource(R.string.feature_account_subscribe_on_site).uppercase())
         }
     }

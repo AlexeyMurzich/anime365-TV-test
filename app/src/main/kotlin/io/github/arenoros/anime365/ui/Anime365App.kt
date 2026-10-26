@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -48,6 +50,7 @@ import io.github.arenoros.anime365.R
 import io.github.arenoros.anime365.core.designsystem.component.BottomSheetSceneStrategy
 import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationBar
 import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationBarItem
+import io.github.arenoros.anime365.core.designsystem.component.LocalTvContentCovered
 import io.github.arenoros.anime365.core.player.VideoPlayer
 import io.github.arenoros.anime365.feature.account.navigation.LoginKey
 import io.github.arenoros.anime365.feature.account.navigation.SettingsKey
@@ -68,6 +71,7 @@ import io.github.arenoros.anime365.feature.series.navigation.SeriesKey
 import io.github.arenoros.anime365.feature.series.navigation.TranslationsKey
 import io.github.arenoros.anime365.feature.series.navigation.seriesEntries
 import io.github.arenoros.anime365.navigation.TopLevelDestination
+import kotlinx.coroutines.flow.StateFlow
 
 /** [link] — касание уведомления о Новом Эпизоде; после перехода вызывается [onLinkHandled]. */
 @Composable
@@ -83,6 +87,7 @@ internal fun Anime365App(
     val newEpisodeCount by viewModel.newEpisodeCount.collectAsStateWithLifecycle()
 
     val player = rememberPlayerHost()
+    val hiddenSeriesIds = rememberHiddenSeriesIds(viewModel.hiddenSeriesIds, backStacks.values, player)
 
     LaunchedEffect(link) {
         if (link == null) return@LaunchedEffect
@@ -91,17 +96,13 @@ internal fun Anime365App(
         onLinkHandled()
     }
 
-    val decorators =
-        listOf(
-            rememberSaveableStateHolderNavEntryDecorator<NavKey>(),
-            rememberViewModelStoreNavEntryDecorator(),
-        )
+    val decorators = rememberNavDecorators()
     // Записи всех табов живут всё время: так переключение таба не сбрасывает ни прокрутку, ни ViewModel.
     val entries =
         TopLevelDestination.entries.associateWith { destination ->
-            rememberEntries(backStacks.getValue(destination), destination.name, decorators, player)
+            rememberEntries(backStacks.getValue(destination), destination.name, decorators, player, hiddenSeriesIds)
         }
-    val playerEntries = rememberEntries(player.stack, "Player", decorators, player)
+    val playerEntries = rememberEntries(player.stack, "Player", decorators, player, hiddenSeriesIds)
     val sceneStrategies = remember { listOf(BottomSheetSceneStrategy<NavKey>(), SinglePaneSceneStrategy()) }
 
     // «Назад» с корня любого таба, кроме Главной, ведёт на Главную, а не закрывает приложение.
@@ -112,39 +113,63 @@ internal fun Anime365App(
     Box(modifier) {
         // Под развёрнутым Плеером приложение остаётся на месте: свайп вниз сворачивает Плеер и
         // открывает его. Пока Плеер развёрнут, TalkBack не видит того, что под ним.
-        Scaffold(
-            modifier = if (player.expanded) Modifier.clearAndSetSemantics {} else Modifier,
-            bottomBar = {
-                if (!rememberIsInPictureInPicture()) {
-                    AppNavigationBar(
-                        current = current,
-                        newEpisodeCount = newEpisodeCount,
-                        onSelect = { destination ->
-                            // Повторное нажатие на активный таб возвращает к его корню.
-                            if (destination == current) {
-                                while (backStack.size > 1) backStack.removeLastOrNull()
-                            } else {
-                                current = destination
-                            }
-                        },
+        CompositionLocalProvider(LocalTvContentCovered provides player.expanded) {
+            Scaffold(
+                modifier = if (player.expanded) Modifier.clearAndSetSemantics {} else Modifier,
+                bottomBar = {
+                    if (!rememberIsInPictureInPicture()) {
+                        AppNavigationBar(
+                            current = current,
+                            newEpisodeCount = newEpisodeCount,
+                            onSelect = { destination ->
+                                // Повторное нажатие на активный таб возвращает к его корню.
+                                if (destination == current) {
+                                    while (backStack.size > 1) backStack.removeLastOrNull()
+                                } else {
+                                    current = destination
+                                }
+                            },
+                        )
+                    }
+                },
+                // Верхний отступ у каждого экрана свой: зелёная шапка заходит под статус-бар.
+                contentWindowInsets = WindowInsets(0),
+            ) { padding ->
+                Box {
+                    NavDisplay(
+                        entries = entries.getValue(current),
+                        modifier = Modifier.padding(padding).consumeWindowInsets(padding),
+                        sceneStrategies = sceneStrategies,
+                        onBack = { backStack.removeLastOrNull() },
                     )
+                    PlayerWindow(player, viewModel.videoPlayer, hiddenSeriesIds, Modifier.padding(padding))
                 }
-            },
-            // Верхний отступ у каждого экрана свой: зелёная шапка заходит под статус-бар.
-            contentWindowInsets = WindowInsets(0),
-        ) { padding ->
-            Box {
-                NavDisplay(
-                    entries = entries.getValue(current),
-                    modifier = Modifier.padding(padding).consumeWindowInsets(padding),
-                    sceneStrategies = sceneStrategies,
-                    onBack = { backStack.removeLastOrNull() },
-                )
-                PlayerWindow(player, viewModel.videoPlayer, Modifier.padding(padding))
             }
         }
         PlayerLayer(player, playerEntries, sceneStrategies)
     }
+}
+
+@Composable
+private fun rememberNavDecorators(): List<NavEntryDecorator<NavKey>> =
+    listOf(
+        rememberSaveableStateHolderNavEntryDecorator<NavKey>(),
+        rememberViewModelStoreNavEntryDecorator(),
+    )
+
+@Composable
+private fun rememberHiddenSeriesIds(
+    ids: StateFlow<Set<Int>?>,
+    backStacks: Collection<NavBackStack<NavKey>>,
+    player: PlayerHost,
+): Set<Int>? {
+    val hiddenSeriesIds by ids.collectAsStateWithLifecycle()
+    LaunchedEffect(hiddenSeriesIds, backStacks.flatMap { it }, player.stack.toList()) {
+        val hidden = hiddenSeriesIds ?: return@LaunchedEffect
+        if (player.stack.any { it.seriesIdOrNull() in hidden }) player.close()
+        backStacks.forEach { stack -> stack.removeAll { it.seriesIdOrNull() in hidden } }
+    }
+    return hiddenSeriesIds
 }
 
 /** Развёрнутый Плеер и то, что открыто поверх него, — во весь экран над табами (docs/screens.md). */
@@ -158,7 +183,10 @@ private fun PlayerLayer(
     AnimatedVisibility(player.expanded && entries.isNotEmpty(), enter = fadeIn(), exit = ExitTransition.None) {
         // Касания не проходят к приложению, даже где Плеер прозрачен посреди сворачивания.
         Box(Modifier.fillMaxSize().pointerInput(Unit) {}) {
-            NavDisplay(entries = entries, sceneStrategies = sceneStrategies, onBack = player::back)
+            // AnimatedVisibility may retain its content for a frame after the player stack is cleared.
+            if (entries.isNotEmpty()) {
+                NavDisplay(entries = entries, sceneStrategies = sceneStrategies, onBack = player::back)
+            }
         }
     }
 }
@@ -218,10 +246,12 @@ private fun rememberPlayerHost(): PlayerHost {
 private fun PlayerWindow(
     player: PlayerHost,
     videoPlayer: VideoPlayer,
+    hiddenSeriesIds: Set<Int>?,
     modifier: Modifier,
 ) {
     val playing by videoPlayer.playing.collectAsStateWithLifecycle()
-    AutoPictureInPicture(playing = player.stack.isNotEmpty() && playing)
+    val visible = player.stack.none { it.isHidden(hiddenSeriesIds) }
+    AutoPictureInPicture(playing = visible && player.stack.isNotEmpty() && playing)
     val density = LocalDensity.current
     Box(
         modifier.fillMaxSize().onGloballyPositioned {
@@ -232,7 +262,7 @@ private fun PlayerWindow(
                 )
         },
     )
-    if (player.stack.isNotEmpty() && player.minimized) {
+    if (visible && player.stack.isNotEmpty() && player.minimized) {
         MiniPlayer(videoPlayer, onExpand = player::expand, onClose = player::close, modifier = modifier)
     }
 }
@@ -247,12 +277,29 @@ private fun rememberEntries(
     name: String,
     decorators: List<NavEntryDecorator<NavKey>>,
     player: PlayerHost,
+    hiddenSeriesIds: Set<Int>?,
 ): List<NavEntry<NavKey>> {
     val provider = remember(stack) { entryProvider(stack, player) }
+    val hidden by rememberUpdatedState(hiddenSeriesIds)
     return rememberDecoratedNavEntries(stack, decorators) { key ->
         val entry = provider(key)
-        NavEntry(key, "$name/${entry.contentKey}", entry.metadata) { entry.Content() }
+        NavEntry(key, "$name/${entry.contentKey}", entry.metadata) {
+            if (!key.isHidden(hidden)) entry.Content()
+        }
     }
+}
+
+private fun NavKey.seriesIdOrNull(): Int? =
+    when (this) {
+        is SeriesKey -> id
+        is TranslationsKey -> seriesId
+        is PlayerKey -> seriesId
+        else -> null
+    }
+
+private fun NavKey.isHidden(hiddenSeriesIds: Set<Int>?): Boolean {
+    val id = seriesIdOrNull() ?: return false
+    return hiddenSeriesIds == null || id in hiddenSeriesIds
 }
 
 /** Табы; на «Списке» — счётчик Новых Эпизодов. */
@@ -284,6 +331,7 @@ private suspend fun openLink(
     viewModel: AppViewModel,
     player: PlayerHost,
 ) {
+    if (!viewModel.canOpenSeries(link.seriesId)) return
     while (stack.size > 1) stack.removeLastOrNull()
     stack.add(SeriesKey(link.seriesId))
     val translationId = viewModel.rememberedTranslationId(link.seriesId, link.episodeId)
@@ -311,7 +359,7 @@ private fun entryProvider(
     }
     val login: () -> Unit = { backStack.add(LoginKey) }
     val subscription: () -> Unit = { backStack.add(SubscriptionKey) }
-    val back: () -> Unit = { backStack.removeLastOrNull() }
+    val back: () -> Unit = { if (backStack.size > 1) backStack.removeLastOrNull() }
     return entryProvider {
         catalogEntries(
             onOpenSeries = { backStack.add(SeriesKey(it)) },

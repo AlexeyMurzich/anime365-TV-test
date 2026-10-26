@@ -30,6 +30,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.arenoros.anime365.core.datastore.AppSettings
 import io.github.arenoros.anime365.core.designsystem.component.KadrTopAppBar
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
@@ -81,6 +82,14 @@ internal fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(vertical = KadrSpacing.Space2),
         ) {
+            SectionTitle(R.string.feature_account_settings_catalog)
+            SwitchRow(
+                title = stringResource(R.string.feature_account_settings_adult_content),
+                summary = stringResource(R.string.feature_account_settings_adult_content_summary),
+                checked = settings.adultContent,
+                onCheckedChange = { enabled -> onUpdate { it.copy(adultContent = enabled) } },
+            )
+            HorizontalDivider(Modifier.padding(vertical = KadrSpacing.Space2))
             SectionTitle(R.string.feature_account_settings_notifications)
             SwitchRow(
                 title = stringResource(R.string.feature_account_settings_new_episodes),
@@ -178,7 +187,7 @@ private fun SwitchRow(
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(summary, style = MaterialTheme.typography.bodyMedium, color = KadrTheme.palette.inkMuted)
         }
-        Switch(checked = checked, onCheckedChange = null)
+        Switch(modifier = Modifier.tvFocusIndicator(), checked = checked, onCheckedChange = null)
     }
 }
 
@@ -193,6 +202,7 @@ private fun HeightChoice(
         FlowRow(horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space2)) {
             HEIGHTS.forEach { height ->
                 FilterChip(
+                    modifier = Modifier.tvFocusIndicator(),
                     selected = height == selected,
                     onClick = { onSelect(height) },
                     label = { Text(stringResource(R.string.feature_account_settings_height, height)) },

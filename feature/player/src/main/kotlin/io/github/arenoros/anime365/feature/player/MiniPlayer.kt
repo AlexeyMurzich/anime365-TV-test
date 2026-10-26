@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.round
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.PlayPauseButtonState
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrRadius
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrSpacing
@@ -178,7 +179,7 @@ private fun MiniButton(
     onClick: () -> Unit,
     modifier: Modifier,
 ) {
-    IconButton(onClick = onClick, modifier = modifier) {
+    IconButton(onClick = onClick, modifier = modifier.tvFocusIndicator()) {
         Icon(
             painterResource(icon),
             contentDescription = description,

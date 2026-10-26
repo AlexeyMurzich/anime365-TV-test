@@ -9,6 +9,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.arenoros.anime365.core.data.repository.CatalogRepository
+import io.github.arenoros.anime365.core.datastore.SettingsStore
 import io.github.arenoros.anime365.core.model.CatalogFilter
 import io.github.arenoros.anime365.core.model.SeriesSummary
 import io.github.arenoros.anime365.feature.catalog.navigation.CatalogKey
@@ -16,6 +17,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -23,6 +25,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 @HiltViewModel(assistedFactory = CatalogViewModel.Factory::class)
 internal class CatalogViewModel
@@ -30,6 +34,7 @@ internal class CatalogViewModel
     constructor(
         @Assisted key: CatalogKey,
         repository: CatalogRepository,
+        settings: SettingsStore,
     ) : ViewModel() {
         private val _query = MutableStateFlow("")
         val query: StateFlow<String> = _query.asStateFlow()
@@ -37,6 +42,19 @@ internal class CatalogViewModel
         private val _filter =
             MutableStateFlow(CatalogFilter(genreIds = setOfNotNull(key.genreId), ongoingOnly = key.ongoingOnly))
         val filter: StateFlow<CatalogFilter> = _filter.asStateFlow()
+
+        val adultContent =
+            settings.settings
+                .map { it.adultContent }
+                .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+        init {
+            viewModelScope.launch {
+                adultContent.collect { allowed ->
+                    if (!allowed) _filter.value = _filter.value.copy(isHentai = false)
+                }
+            }
+        }
 
         /** Поиск по мере ввода: запрос уходит, когда пользователь замер на [SEARCH_DEBOUNCE_MILLIS]. */
         @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -47,7 +65,9 @@ internal class CatalogViewModel
                     .map { it.trim() }
                     .distinctUntilChanged(),
                 _filter,
-            ) { query, filter -> query to filter }
+                adultContent,
+            ) { query, filter, allowed -> query to filter.copy(isHentai = filter.isHentai && allowed) }
+                .distinctUntilChanged()
                 .flatMapLatest { (query, filter) -> repository.catalog(query, filter) }
                 .cachedIn(viewModelScope)
 
@@ -57,12 +77,13 @@ internal class CatalogViewModel
 
         /** Сезон без года API не ищет (docs/api-notes.md): снимаем год — снимается и сезон. */
         fun onFilterChange(filter: CatalogFilter) {
-            _filter.value = if (filter.year == null) filter.copy(season = null) else filter
+            val permitted = filter.copy(isHentai = filter.isHentai && adultContent.value)
+            _filter.value = if (permitted.year == null) permitted.copy(season = null) else permitted
         }
 
         fun reset() {
             _query.value = ""
-            _filter.value = CatalogFilter()
+            _filter.value = CatalogFilter(isHentai = _filter.value.isHentai)
         }
 
         @AssistedFactory

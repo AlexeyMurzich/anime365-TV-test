@@ -38,6 +38,8 @@ import io.github.arenoros.anime365.core.designsystem.component.ErrorState
 import io.github.arenoros.anime365.core.designsystem.component.SkeletonLine
 import io.github.arenoros.anime365.core.designsystem.component.StaleDataBanner
 import io.github.arenoros.anime365.core.designsystem.component.errorMessage
+import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
+import io.github.arenoros.anime365.core.designsystem.component.tvInitialFocus
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
 import io.github.arenoros.anime365.core.designsystem.tokens.KadrLayout
@@ -141,6 +143,14 @@ internal fun TranslationPickerSheet(
                             state.isRemembered(translation),
                             state.downloads[translation.id],
                             onClick = { onSelect(translation) },
+                            modifier =
+                                if (translation.id ==
+                                    state.shown.firstOrNull()?.id
+                                ) {
+                                    Modifier.tvInitialFocus()
+                                } else {
+                                    Modifier
+                                },
                         )
                     }
                 }
@@ -189,6 +199,7 @@ private fun KindChips(
     ) {
         items(kinds) { kind ->
             FilterChip(
+                modifier = Modifier.tvFocusIndicator(),
                 selected = kind == selected,
                 onClick = { onSelect(kind) },
                 label = { Text(stringResource(kind.label())) },
@@ -207,11 +218,13 @@ private fun TranslationRow(
     remembered: Boolean,
     download: DownloadState?,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .heightIn(min = KadrLayout.TouchTarget + KadrSpacing.Space2)
+            .tvFocusIndicator()
             .clickable(onClick = onClick)
             .padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space2),
         verticalAlignment = Alignment.CenterVertically,

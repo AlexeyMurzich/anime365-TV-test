@@ -40,6 +40,49 @@ class CatalogRemoteMediatorTest {
     }
 
     @Test
+    fun adultSearchUsesSeparateCacheAndDomain() =
+        runTest {
+            api.seriesList = { listOf(seriesDto(7).copy(isHentai = 1), seriesDto(8)) }
+            val adult = CatalogQuery("example", CatalogFilter(isHentai = true))
+            val normal = CatalogQuery("example", CatalogFilter())
+
+            assertTrue(mediator(adult).load(LoadType.REFRESH, pagingState) is MediatorResult.Success)
+            assertEquals("https://hentai365.org/api/series", api.seriesRequests.single().url)
+            assertEquals("example", api.seriesRequests.single().query)
+            assertNull(api.seriesRequests.single().chips)
+            assertEquals(listOf(7), dao.observe(adult.listKey).first().map { it.id })
+            assertTrue(dao.observe(normal.listKey).first().isEmpty())
+            assertTrue(
+                dao
+                    .observe(adult.listKey)
+                    .first()
+                    .single()
+                    .isHentai,
+            )
+
+            mediator(normal).load(LoadType.REFRESH, pagingState)
+            assertEquals("series", api.seriesRequests.last().url)
+            assertEquals(listOf(8), dao.observe(normal.listKey).first().map { it.id })
+            assertEquals(listOf(7), dao.observe(adult.listKey).first().map { it.id })
+        }
+
+    @Test
+    fun adultCatalogKeepsOnlyItsSectionInSeparateCache() =
+        runTest {
+            api.seriesList = { listOf(seriesDto(7).copy(isHentai = 1), seriesDto(8)) }
+            val adult = CatalogQuery("", CatalogFilter(ongoingOnly = true, isHentai = true))
+            val normal = CatalogQuery("", CatalogFilter(ongoingOnly = true))
+
+            mediator(adult).load(LoadType.REFRESH, pagingState)
+            mediator(normal).load(LoadType.REFRESH, pagingState)
+
+            assertEquals(listOf("https://hentai365.org/api/series", "series"), api.seriesRequests.map { it.url })
+            assertEquals(listOf("isAiring=1", "isAiring=1"), api.seriesRequests.map { it.chips })
+            assertEquals(listOf(7), dao.observe(adult.listKey).first().map { it.id })
+            assertEquals(listOf(8), dao.observe(normal.listKey).first().map { it.id })
+        }
+
+    @Test
     fun refreshStoresFirstPageInServerOrder() =
         runTest {
             api.seriesList = { request -> page(from = request.offset + 1) }
