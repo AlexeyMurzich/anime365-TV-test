@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -14,6 +15,13 @@ import kotlinx.coroutines.flow.map
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** Цветовая тема приложения; System следует настройке устройства. */
+enum class ThemeMode {
+    System,
+    Light,
+    Dark,
+}
 
 /**
  * Экран Настроек (docs/screens.md). [wifiHeight] и [mobileHeight] — Разрешение, с которого Плеер начинает:
@@ -30,6 +38,7 @@ data class AppSettings(
     val downloadHeight: Int = 720,
     val crashReports: Boolean = false,
     val adultContent: Boolean = false,
+    val themeMode: ThemeMode = ThemeMode.System,
 )
 
 /** Настройки и одноразовые подсказки. Входят в резервную копию Android. */
@@ -83,6 +92,7 @@ internal class DataStoreSettingsStore
                 preferences[DOWNLOAD_HEIGHT] = settings.downloadHeight
                 preferences[CRASH_REPORTS] = settings.crashReports
                 preferences[ADULT_CONTENT] = settings.adultContent
+                preferences[THEME_MODE] = settings.themeMode.name
             }
         }
 
@@ -97,6 +107,7 @@ internal class DataStoreSettingsStore
                 downloadHeight = this[DOWNLOAD_HEIGHT] ?: defaults.downloadHeight,
                 crashReports = this[CRASH_REPORTS] ?: defaults.crashReports,
                 adultContent = this[ADULT_CONTENT] ?: defaults.adultContent,
+                themeMode = ThemeMode.entries.firstOrNull { it.name == this[THEME_MODE] } ?: defaults.themeMode,
             )
         }
 
@@ -109,6 +120,7 @@ internal class DataStoreSettingsStore
             val DOWNLOAD_WIFI_ONLY = booleanPreferencesKey("download_wifi_only")
             val DOWNLOAD_HEIGHT = intPreferencesKey("download_height")
             val CRASH_REPORTS = booleanPreferencesKey("crash_reports")
+            val THEME_MODE = stringPreferencesKey("theme_mode")
             val ADULT_CONTENT = booleanPreferencesKey("adult_content")
             val UPDATE_CHECKED_AT = longPreferencesKey("update_checked_at")
         }

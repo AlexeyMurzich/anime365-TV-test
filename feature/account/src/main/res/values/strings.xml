@@ -57,4 +57,9 @@
     <string name="feature_account_subscription_text">Видео доступно с подпиской anime365. Оформить её можно на сайте — в приложении оплаты нет.</string>
     <string name="feature_account_subscription_refresh">Я уже оформил — обновить</string>
     <string name="feature_account_subscription_still_missing">Подписка пока не видна. Если только что оформили — попробуйте через минуту.</string>
+    <string name="feature_account_settings_appearance">Внешний вид</string>
+    <string name="feature_account_settings_theme">Цветовая тема</string>
+    <string name="feature_account_settings_theme_system">Как в системе</string>
+    <string name="feature_account_settings_theme_light">Светлая</string>
+    <string name="feature_account_settings_theme_dark">Тёмная</string>
 </resources>

@@ -25,6 +25,7 @@ class DataStoreSettingsStoreTest {
                     downloadWifiOnly = false,
                     downloadHeight = 1080,
                     adultContent = true,
+                    themeMode = ThemeMode.Light,
                 )
             }
 
@@ -36,6 +37,7 @@ class DataStoreSettingsStoreTest {
                     downloadWifiOnly = false,
                     downloadHeight = 1080,
                     adultContent = true,
+                    themeMode = ThemeMode.Light,
                 )
             assertEquals(expected, store.settings.first())
         }

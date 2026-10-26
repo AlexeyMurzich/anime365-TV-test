@@ -32,14 +32,22 @@ val LocalTvContentCovered = staticCompositionLocalOf { false }
 fun isTelevision(): Boolean =
     LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK == Configuration.UI_MODE_TYPE_TELEVISION
 
-/** A white outline remains distinct from the green selected/watched state. */
+/** Two-tone focus stays visible on light surfaces, dark surfaces and poster images. */
 fun Modifier.tvFocusIndicator(): Modifier =
     composed {
         if (!isTelevision()) return@composed this
         var focused by remember { mutableStateOf(false) }
         this
             .onFocusChanged { focused = it.isFocused }
-            .then(if (focused) Modifier.border(3.dp, Color.White, RoundedCornerShape(8.dp)) else Modifier)
+            .then(
+                if (focused) {
+                    Modifier
+                        .border(1.5.dp, Color.White, RoundedCornerShape(8.dp))
+                        .border(3.dp, Color.Black, RoundedCornerShape(8.dp))
+                } else {
+                    Modifier
+                },
+            )
     }
 
 /** Save only the activated item's focus, alongside its navigation entry's saved scroll position. */

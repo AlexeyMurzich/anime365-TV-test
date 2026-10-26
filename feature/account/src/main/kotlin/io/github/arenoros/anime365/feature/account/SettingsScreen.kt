@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.arenoros.anime365.core.datastore.AppSettings
+import io.github.arenoros.anime365.core.datastore.ThemeMode
 import io.github.arenoros.anime365.core.designsystem.component.KadrTopAppBar
 import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.theme.KadrTheme
@@ -82,6 +83,8 @@ internal fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(vertical = KadrSpacing.Space2),
         ) {
+            ThemeSettings(settings.themeMode) { mode -> onUpdate { it.copy(themeMode = mode) } }
+            HorizontalDivider(Modifier.padding(vertical = KadrSpacing.Space2))
             SectionTitle(R.string.feature_account_settings_catalog)
             SwitchRow(
                 title = stringResource(R.string.feature_account_settings_adult_content),
@@ -120,6 +123,33 @@ internal fun SettingsScreen(
                     summary = stringResource(R.string.feature_account_settings_crash_reports_summary),
                     checked = settings.crashReports,
                     onCheckedChange = { enabled -> onUpdate { it.copy(crashReports = enabled) } },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemeSettings(
+    selected: ThemeMode,
+    onSelect: (ThemeMode) -> Unit,
+) {
+    SectionTitle(R.string.feature_account_settings_appearance)
+    Column(Modifier.padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space2)) {
+        Text(stringResource(R.string.feature_account_settings_theme), style = MaterialTheme.typography.bodyLarge)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(KadrSpacing.Space2)) {
+            ThemeMode.entries.forEach { mode ->
+                val label =
+                    when (mode) {
+                        ThemeMode.System -> R.string.feature_account_settings_theme_system
+                        ThemeMode.Light -> R.string.feature_account_settings_theme_light
+                        ThemeMode.Dark -> R.string.feature_account_settings_theme_dark
+                    }
+                FilterChip(
+                    modifier = Modifier.tvFocusIndicator(),
+                    selected = mode == selected,
+                    onClick = { onSelect(mode) },
+                    label = { Text(stringResource(label)) },
                 )
             }
         }
@@ -178,6 +208,7 @@ private fun SwitchRow(
         Modifier
             .fillMaxWidth()
             .heightIn(min = KadrLayout.TouchTarget)
+            .tvFocusIndicator()
             .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
             .padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space2),
         verticalAlignment = Alignment.CenterVertically,
@@ -187,7 +218,7 @@ private fun SwitchRow(
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(summary, style = MaterialTheme.typography.bodyMedium, color = KadrTheme.palette.inkMuted)
         }
-        Switch(modifier = Modifier.tvFocusIndicator(), checked = checked, onCheckedChange = null)
+        Switch(checked = checked, onCheckedChange = null)
     }
 }
 
