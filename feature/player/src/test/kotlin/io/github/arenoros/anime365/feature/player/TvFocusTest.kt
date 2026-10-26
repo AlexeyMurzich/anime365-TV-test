@@ -22,7 +22,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import io.github.arenoros.anime365.core.designsystem.component.LocalTvContentCovered
+import io.github.arenoros.anime365.core.designsystem.component.rememberTvInitialFocus
 import io.github.arenoros.anime365.core.designsystem.component.tvClickable
+import io.github.arenoros.anime365.core.designsystem.component.tvInitialFocus
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -112,5 +114,43 @@ class TvFocusTest {
         compose.onNodeWithTag("player").assertIsFocused()
         compose.runOnIdle { covered.value = false }
         compose.onNodeWithTag("second").assertIsFocused()
+    }
+
+    @Test
+    fun primaryActionDoesNotTakeFocusAgainWhenScrolledBackIntoComposition() {
+        val shown = mutableStateOf(true)
+        val other = FocusRequester()
+        compose.setContent {
+            val config =
+                Configuration(LocalConfiguration.current).apply {
+                    uiMode = Configuration.UI_MODE_TYPE_TELEVISION
+                }
+            CompositionLocalProvider(LocalConfiguration provides config) {
+                val initialFocus = rememberTvInitialFocus()
+                Row {
+                    Box(
+                        Modifier
+                            .size(80.dp)
+                            .focusRequester(other)
+                            .testTag("other")
+                            .focusable(),
+                    )
+                    if (shown.value) {
+                        Box(
+                            Modifier
+                                .size(80.dp)
+                                .testTag("primary")
+                                .tvInitialFocus(initialFocus)
+                                .focusable(),
+                        )
+                    }
+                }
+            }
+        }
+        compose.onNodeWithTag("primary").assertIsFocused()
+        compose.runOnIdle { shown.value = false }
+        compose.runOnIdle { other.requestFocus() }
+        compose.runOnIdle { shown.value = true }
+        compose.onNodeWithTag("other").assertIsFocused()
     }
 }

@@ -183,7 +183,7 @@ private fun PlayerLayer(
     AnimatedVisibility(player.expanded && entries.isNotEmpty(), enter = fadeIn(), exit = ExitTransition.None) {
         // Касания не проходят к приложению, даже где Плеер прозрачен посреди сворачивания.
         Box(Modifier.fillMaxSize().pointerInput(Unit) {}) {
-            // AnimatedVisibility may retain its content for a frame after the player stack is cleared.
+            // AnimatedVisibility может держать содержимое ещё кадр после того, как стек Плеера опустел.
             if (entries.isNotEmpty()) {
                 NavDisplay(entries = entries, sceneStrategies = sceneStrategies, onBack = player::back)
             }

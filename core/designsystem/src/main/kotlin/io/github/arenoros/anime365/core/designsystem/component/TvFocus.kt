@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,15 +25,15 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
-/** True only for the underlying app content while its separate player layer is expanded. */
+/** true только у приложения под развёрнутым Плеером: Плеер лежит над ним отдельным слоем. */
 val LocalTvContentCovered = staticCompositionLocalOf { false }
 
-/** Keep remote-specific behaviour out of the touch interface. */
+/** Телевизор с пультом: поведение для пульта не должно задевать сенсорный интерфейс телефона. */
 @Composable
 fun isTelevision(): Boolean =
     LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK == Configuration.UI_MODE_TYPE_TELEVISION
 
-/** Two-tone focus stays visible on light surfaces, dark surfaces and poster images. */
+/** Двухцветная рамка фокуса видна и на светлых, и на тёмных поверхностях, и на постерах. */
 fun Modifier.tvFocusIndicator(): Modifier =
     composed {
         if (!isTelevision()) return@composed this
@@ -50,7 +51,7 @@ fun Modifier.tvFocusIndicator(): Modifier =
             )
     }
 
-/** Save only the activated item's focus, alongside its navigation entry's saved scroll position. */
+/** Нажатый элемент получает фокус обратно, когда его экран снова виден: после «Назад» или Плеера. */
 fun Modifier.tvClickable(
     onClick: () -> Unit,
     role: Role? = null,
@@ -75,20 +76,31 @@ fun Modifier.tvClickable(
         }
     }
 
-/** Request focus once, after the asynchronously loaded primary action has entered composition. */
-fun Modifier.tvInitialFocus(): Modifier =
+/**
+ * Выдан ли первый фокус экрана. Живёт на уровне экрана, выше ленивого списка: элемент, прокрученный
+ * за край и вернувшийся, фокус не перехватывает.
+ */
+@Stable
+class TvInitialFocus internal constructor() {
+    internal var requested by mutableStateOf(false)
+}
+
+@Composable
+fun rememberTvInitialFocus(): TvInitialFocus = remember { TvInitialFocus() }
+
+/** Один раз отдаёт фокус главному действию, когда оно появится после загрузки, и снова — после Плеера. */
+fun Modifier.tvInitialFocus(state: TvInitialFocus): Modifier =
     composed {
         if (!isTelevision()) return@composed this
         val requester = remember { FocusRequester() }
         val windowFocused = LocalWindowInfo.current.isWindowFocused
         val covered = LocalTvContentCovered.current
-        var requested by remember { mutableStateOf(false) }
         LaunchedEffect(windowFocused, covered) {
-            if (covered) requested = false
-            if (windowFocused && !covered && !requested) {
+            if (covered) state.requested = false
+            if (windowFocused && !covered && !state.requested) {
                 withFrameNanos { }
                 requester.requestFocus()
-                requested = true
+                state.requested = true
             }
         }
         this.focusRequester(requester)

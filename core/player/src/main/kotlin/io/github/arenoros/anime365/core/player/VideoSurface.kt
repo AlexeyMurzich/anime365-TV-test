@@ -27,7 +27,7 @@ fun VideoSurface(
                 setShutterBackgroundColor(Color.BLACK)
                 setKeepContentOnPlayerReset(true)
                 this.player = player.player
-                // TV input belongs to the Compose controls, not PlayerView's hidden controller.
+                // Пульт управляет кнопками Compose, а не скрытым контроллером PlayerView.
                 if (context.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK ==
                     Configuration.UI_MODE_TYPE_TELEVISION
                 ) {

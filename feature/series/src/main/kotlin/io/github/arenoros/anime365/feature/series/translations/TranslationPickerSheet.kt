@@ -38,6 +38,7 @@ import io.github.arenoros.anime365.core.designsystem.component.ErrorState
 import io.github.arenoros.anime365.core.designsystem.component.SkeletonLine
 import io.github.arenoros.anime365.core.designsystem.component.StaleDataBanner
 import io.github.arenoros.anime365.core.designsystem.component.errorMessage
+import io.github.arenoros.anime365.core.designsystem.component.rememberTvInitialFocus
 import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.component.tvInitialFocus
 import io.github.arenoros.anime365.core.designsystem.icon.KadrIcons
@@ -109,6 +110,7 @@ internal fun TranslationPickerSheet(
     onSelect: (Translation) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val initialFocus = rememberTvInitialFocus()
     Column(modifier.fillMaxWidth()) {
         Text(
             state.episodeLabel ?: stringResource(R.string.feature_series_translations_title),
@@ -136,21 +138,16 @@ internal fun TranslationPickerSheet(
             else -> {
                 if (error != null) StaleDataBanner(error)
                 KindChips(state.kinds, state.selectedKind, onSelectKind)
+                val firstId = state.shown.firstOrNull()?.id
                 LazyColumn(contentPadding = PaddingValues(bottom = KadrSpacing.Space6)) {
                     items(state.shown, key = { it.id }) { translation ->
+                        val focus = if (translation.id == firstId) Modifier.tvInitialFocus(initialFocus) else Modifier
                         TranslationRow(
                             translation,
                             state.isRemembered(translation),
                             state.downloads[translation.id],
                             onClick = { onSelect(translation) },
-                            modifier =
-                                if (translation.id ==
-                                    state.shown.firstOrNull()?.id
-                                ) {
-                                    Modifier.tvInitialFocus()
-                                } else {
-                                    Modifier
-                                },
+                            modifier = focus,
                         )
                     }
                 }

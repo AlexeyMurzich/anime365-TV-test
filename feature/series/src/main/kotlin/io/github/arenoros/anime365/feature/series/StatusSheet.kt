@@ -83,6 +83,7 @@ internal fun StatusOptions(
                     Modifier
                         .fillMaxWidth()
                         .heightIn(min = KadrLayout.TouchTarget)
+                        .tvFocusIndicator()
                         .selectable(
                             selected = option == status,
                             role = Role.RadioButton,
@@ -90,7 +91,7 @@ internal fun StatusOptions(
                         ).padding(horizontal = KadrSpacing.Space4),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RadioButton(modifier = Modifier.tvFocusIndicator(), selected = option == status, onClick = null)
+                    RadioButton(selected = option == status, onClick = null)
                     Text(
                         option.label(),
                         Modifier.padding(start = KadrSpacing.Space4),

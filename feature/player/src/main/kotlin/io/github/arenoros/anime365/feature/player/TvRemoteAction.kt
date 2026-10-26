@@ -13,7 +13,7 @@ internal enum class TvRemoteAction {
     Pause,
 }
 
-/** Visible controls keep normal directional/OK focus navigation. Media keys always work. */
+/** При видимых кнопках стрелки и OK двигают и нажимают фокус как обычно. Медиакнопки работают всегда. */
 internal fun tvRemoteAction(
     keyCode: Int,
     controlsVisible: Boolean,
@@ -41,7 +41,7 @@ private fun hiddenControlsAction(keyCode: Int): TvRemoteAction =
         else -> TvRemoteAction.None
     }
 
-/** Pair key-up with its original key-down, even when that press reveals the overlay. */
+/** Отпускание кнопки достаётся тому же, кто принял нажатие, даже если это нажатие показало кнопки. */
 internal class TvRemoteInput {
     private var pressedKey: Int? = null
     private var pressedAction = TvRemoteAction.None

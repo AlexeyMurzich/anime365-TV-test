@@ -6,7 +6,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,11 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
@@ -175,7 +170,7 @@ private fun RequestPlayerControlsFocus(
             requester.requestFocus()
         }
     }
-    // Android may clear focus once more after disposing a dialog. Recover while this layer is active.
+    // Закрывшийся диалог может ещё раз сбросить фокус: пока слой активен, фокус возвращается.
     LaunchedEffect(television, windowFocused, hasFocus) {
         if (television && windowFocused && !hasFocus) {
             withFrameNanos { }
@@ -184,7 +179,7 @@ private fun RequestPlayerControlsFocus(
     }
 }
 
-/** Remove hidden TV controls immediately so their focus targets cannot survive an exit animation. */
+/** На телевизоре скрытые кнопки исчезают сразу: во время анимации исчезновения они ещё ловили бы фокус. */
 @Composable
 private fun PlayerControlsVisibility(
     visible: Boolean,

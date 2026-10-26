@@ -63,7 +63,9 @@ import io.github.arenoros.anime365.core.designsystem.component.RatingLarge
 import io.github.arenoros.anime365.core.designsystem.component.SkeletonLine
 import io.github.arenoros.anime365.core.designsystem.component.StaleDataBanner
 import io.github.arenoros.anime365.core.designsystem.component.StatusBadge
+import io.github.arenoros.anime365.core.designsystem.component.TvInitialFocus
 import io.github.arenoros.anime365.core.designsystem.component.errorMessage
+import io.github.arenoros.anime365.core.designsystem.component.rememberTvInitialFocus
 import io.github.arenoros.anime365.core.designsystem.component.skeleton
 import io.github.arenoros.anime365.core.designsystem.component.tvFocusIndicator
 import io.github.arenoros.anime365.core.designsystem.component.tvInitialFocus
@@ -204,10 +206,11 @@ private fun SeriesContent(
             onDismiss = { editingStatus = false },
         )
     }
+    val initialFocus = rememberTvInitialFocus()
     LazyColumn(contentPadding = PaddingValues(bottom = KadrSpacing.Space6)) {
         if (state.error != null && details != null) item { StaleDataBanner(state.error) }
         item { Header(series.summary, details) }
-        item { MainActions(state, onOpenEpisode, onPlay, onEditStatus = { editingStatus = true }) }
+        item { MainActions(state, initialFocus, onOpenEpisode, onPlay, onEditStatus = { editingStatus = true }) }
         if (details != null && details.genres.isNotEmpty()) item { Genres(details, onOpenGenre) }
         item { Tabs(tab, onSelect = { tab = it }) }
         when {
@@ -295,6 +298,7 @@ private fun Tabs(
 @Composable
 private fun MainActions(
     state: SeriesUiState,
+    initialFocus: TvInitialFocus,
     onOpenEpisode: (episodeId: Int) -> Unit,
     onPlay: (episodeId: Int, translationId: Int) -> Unit,
     onEditStatus: () -> Unit,
@@ -306,7 +310,9 @@ private fun MainActions(
             .padding(horizontal = KadrSpacing.Space4, vertical = KadrSpacing.Space2),
         verticalArrangement = Arrangement.spacedBy(KadrSpacing.Space2),
     ) {
-        state.watchAction?.let { WatchButton(it, onOpenEpisode, onPlay, Modifier.fillMaxWidth()) }
+        state.watchAction?.let {
+            WatchButton(it, onOpenEpisode, onPlay, Modifier.fillMaxWidth().tvInitialFocus(initialFocus))
+        }
         LibraryButton(state.status, onClick = onEditStatus, Modifier.fillMaxWidth())
     }
 }
@@ -343,7 +349,7 @@ private fun WatchButton(
                 is WatchAction.Start -> onOpenEpisode(action.episode.id)
             }
         },
-        modifier = modifier.tvInitialFocus().tvFocusIndicator(),
+        modifier = modifier.tvFocusIndicator(),
     ) {
         Icon(painterResource(KadrIcons.PlayArrow), contentDescription = null)
         Text(
